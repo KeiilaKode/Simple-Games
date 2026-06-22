@@ -1,3 +1,4 @@
+# RETRO PONG 84' WITH NO EXTRA MATS #
 # Imports
 import pygame
 pygame.init()
