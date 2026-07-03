@@ -1,0 +1,47 @@
+
+# NPS #
+# 2. Hardcode your NPCs using the exact same Player class blueprint!
+#     shopkeeper = Player(name="Barnaby", type_hero="Merchant", skill_lvl=5)
+#     shopkeeper.gold = 500  # Give the shopkeeper some extra spending money
+#     shopkeeper.backpack.append("Health Potion")
+#
+#     goblin_boss = Player(name="Grog", type_hero="Goblin King", skill_lvl=12)
+#     goblin_boss.hp = 30  # Bosses need extra health!
+#     goblin_boss.backpack.append("Shiny Crown")
+
+
+# A companion or second player instance (no prompt needed!)
+#shadow = Player(name="Shadow", type_hero="Rogue", skill_lvl=15)
+#shadow.gold = 150 # You can easily modify stats directly!
+#shadow.backpack.append("Rusty Dagger")
+
+# --- 3. Pull up any stat card at any time! ---
+#KEIIL.show_stats()
+#shadow.display_stats()
+
+
+
+
+
+#print("|" + " " * 52 + "|") # Empty row for spacing
+# print("*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*")
+# print("<" + "'"  * 52 + ">")
+#
+# # 2. Body with Injected Stats (The :<52 keeps the right wall aligned!)
+# print("|" + " " * 52 + "|")
+# print("|" + " " * 52 + "|")
+# print("|" + " " * 52 + "|")
+# print("|" + " " * 52 + "|")
+# print("|" + " " * 52 + "|")
+# print("|" + " " * 52 + "|")
+# # Outer frame beginning
+# print("<" + "," * 52 + ">")
+# print("*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
+
+    # def typewriter_input(text, delay=0.01):
+    #     """Types out a question, then waits for the user's input."""
+    #     # 1. Type out the question using your existing function
+    #     typewriter_whole(text, delay)
+    #
+    #     # 2. Return whatever the user types next!
+    #     return input()

@@ -1,0 +1,7 @@
+Build A "Hint" System: with Breadth-First Search (BFS) to help player find item needed
+Create Validation script at the end to eun the game and find errors in movement and logic
+*leaving off*
+and start building the logic, finish map and create a testable game flow (Validation script)
+make a room say, "There is broken glass on the floor" This is where the player can throw the glass bottle and
+it will open a secret door to a hidden room
+

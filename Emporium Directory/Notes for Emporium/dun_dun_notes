@@ -1,0 +1,18 @@
+  Dunder Methods: double underscore methods: __init__()
+
+__init__(): Used to build variable for the object
+__del__(): Can delete an object
+__str__(): Returns the object representation in a string format
+__len__(): Returns the length of and object
+__eq__(): Can compare two objects, sees if two objects are equal
+__add__(): Can add two objects
+map() # takes two arguments, the function and the iterable
+filter() # takes two arguments, the function and the iterable
+#.pop()
+#.count()
+#.extend()
+#.insert()
+#.index()
+#.append()
+#.remove()
+#.sort()

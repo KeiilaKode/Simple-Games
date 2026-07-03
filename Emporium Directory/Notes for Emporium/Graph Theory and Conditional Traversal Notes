@@ -1,0 +1,21 @@
+Graph Theory
+Nodes, Edges, Destinations
+There are two main ways computers "traverse" or search through a map:
+
+Breadth-First Search (BFS): Exploring all the closest rooms first (like checking every room 1 step away, then every room 2 steps away).
+
+Depth-First Search (DFS): Picking one path and following it as deep as it goes until you hit a dead end, then backtracking.
+Set Theory and Graph Logic
+Spatial Weighting is a way of telling the computer that some distances are "heavier" or "longer" than others.
+Granularity
+In a professional game engine, a developer might say: "The Swamp is one room, but it has a Weight of 3, so it takes 3 seconds to cross."
+using geometry to weight your map. By making the swamp three "rooms" long, you have physically weighted that area.
+Hallway Weight: 1 room (Quick to pass).
+
+Swamp Weight: 3 rooms (Slow to pass).
+Im combining high granularity (lots of sections) with spatial weighting (making areas long or short) to create Pacing.
+
+Build A "Hint" System: with Breadth-First Search (BFS) to help player find item needed
+Create Validation script at the end to eun the game and find errors in movement and logic
+"Graph Traversal" helps. You can eventually write a line of code that asks:
+"Does the player have the item required to reach the room where that item is located?"

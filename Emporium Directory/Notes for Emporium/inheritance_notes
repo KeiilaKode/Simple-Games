@@ -1,0 +1,41 @@
+  #* NOTE: We never use -self- outside of the class
+ self is always first parameter in any method
+  always use self with a property
+
+ superclass and derived class
+ 2 routes to inherit
+
+# r1
+child class is only given new methods,
+no new properties are given.
+NO constructor method (__init__)
+
+instead using the Superclass constructor, the (__init__) from parent class
+
+# 2
+child class is given both new properties and
+new methods
+if there are new properties, there must be a new (__init__)
+constructor method (__init__) needed, and must activate the parent
+superclass constructor as well
+def __init__(self):
+  super().__init__(self)
+
+
+class Main:
+    def __init__(self, p1, p2):
+        self.p1 = p1
+        self.p2 = p2
+
+    def meth_one(self):
+        pass
+
+
+# Child class of Main
+class ChildClass(Main):
+    def method_1(self, pp1):
+        x = self.p1 + pp1
+        return x
+# the (Main) part, after ChildClass(Main)<- is the super call to parent to inherit
+
+ ** ** When creating a child class, pass the Superclass in as a parameter. ** **
