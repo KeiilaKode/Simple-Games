@@ -30,7 +30,7 @@ class Character:
         stat_name = f" NAME:  {self.name}"
         stat_role = f" CLASS: {self.role}"
         stat_hp = f" HP:    {self.health}/{self.health_max}"
-        stat_weapon = f" WEAPON:{self.weapon.name} ({self.weapon.damage} DMG)"
+        stat_weapon = f" WEAPON: {self.weapon.name} ({self.weapon.damage} DMG)"
         stat_bag = f" BAG:   {len(self.bag.purse)}/{self.bag.capacity} Items"
 
         # Prints it all out in a frame to the terminal.

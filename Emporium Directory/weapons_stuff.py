@@ -1,4 +1,4 @@
-class Weapon():
+class Weapon:
     all_weapons:list = []
 
     def __init__(self, name:str, kind:str, damage:int, value:int):
@@ -16,6 +16,14 @@ class Weapon():
         return (f"{self.name} is a {self.kind}, and does {self.damage} DMG."
                 f"It's worth {self.value} $$$")
 
+class Item:
+    def __init__(self, name: str, description: str, value: int = 0):
+        self.name = name
+        self.description = description
+        self.value = value
 
-knife = Weapon("Knife", "One-handed", 1, 2)
-#print(knife)
+    def __repr__(self):
+        return f"{self.__class__.__name__}('{self.name}')"
+
+    def __str__(self):
+        return f"{self.name} - {self.description}"

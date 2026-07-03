@@ -29,5 +29,6 @@ class Bag(Inventory):
         super().__init__(name=name, capacity=capacity)
         self.size = size
 
-lil_bag = Bag("Regular Backpack", 10)
+
+
 

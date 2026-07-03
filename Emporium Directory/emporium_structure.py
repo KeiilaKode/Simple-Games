@@ -1,24 +1,24 @@
-# file for cave layout and any dicts, list, ect.
-# World Mapp  rooms:dict{}, holding dicts like Cave Entrance:dicts{} as keys,
-# and the dict:rooms{} values are dicts{} of the corrosponding the directions from current room, and where they take you
-
+from creation_page import *
 
 layout:dict = {
-        "Cave Entrance": {"Left": "Upper Tunnel",  # Still must do
+        "Cave Entrance": {"Left": "Upper Tunnel",
                           "Straight": "Center Room",
                           "Right": "Rock Hallway",
                           "Stay": "Cave Entrance"},
+        "Upper Tunnel": {"Back": "Cave Entrance",
+                         "Stay": "Upper Tunnel",
+                         "Forward": "Blocked by mysterious danger"},
 
-        "Center Room": {"Left": "Attic Ledge",  # Still must do
-                        "Right": "Vine Room",  # Still must do
+        "Center Room": {"Left": "Attic Ledge",
+                        "Right": "Vine Room",
                         "Back": "Cave Entrance",
                         "Stay": "Center Room"},
         "Attic Ledge": {"Forward": "Blocked by Bolder---",
                         "Back": "Center Room",
                         "Stay": "Attic Ledge"},
 
-        "Rock Hallway": {"Left": "Hide-hole",  # Still must do
-                         "Right": "Swamp Water Shallows",  # Still must do
+        "Rock Hallway": {"Left": "Hide-hole",
+                         "Right": "Swamp Water Shallows",
                          "Back": "Cave Entrance",
                          "Forward": "Rock Hallway Deep",
                          "Stay": "Rock Hallway"},
@@ -53,52 +53,54 @@ layout:dict = {
 
         "Hallway's End": {"Right": "Fungus Trails",  # Still must do
                           "Left": "Rock Wall"},
+        "Rock Wall": {"back": "Hallway's End"},
 
         "Mildred's Emporium": {"Back": "Path to Emporium",
-                               "Stay": "Mildred's Emporium"}
+                               "Stay": "Mildred's Emporium"},
+        "Fungus Trails": {"Left": "Hallway's End",
+                          "forward": "NOT SURE YET" }
     }
 
 
-#                items_map:{Room:Item} # add the room sentence somehow
-treasure:dict = {"Secret Room": "Crowbar",
-             "Swamp Water Center": "Treasure Chest",
-             "Fungus Trails": "Diving Mask",
-             "Attic Ledge": "Collar",
-             "Mildred's Emporium": "Torch",
-             "Hide-hole": "Glass Bottle",
-             "Vine Room": "Small Pouch",
-             "Swamp Water Shallows": "Sharpening Stone"
-    }
+# No quotation marks around the values as they are now real objects.
+treasure: dict = {
+    "Secret Room": crowbar,
+    "Swamp Water Center": treasure_chest,
+    "Fungus Trails": diving_mask,
+    "Attic Ledge": collar,
+    "Mildred's Emporium": torch,
+    "Hide-hole": glass_bottle,
+    "Vine Room": small_pouch,
+    "Swamp Water Shallows": sharpening_stone
+}
 
+# def master_key(layout, treasure):
+#     print("~*~*~*~*~*~*~*~*")
+#     print("~* CAVE MAP *~*")
+#     print("~*~*~*~*~*~*~*~*")
+#     print("\n")
+#
+#     # Way to handle nested dictionaries (Rooms)
+#     # for location, connections in layout.items():
+    #     print(f"Location: {location}")
+    #     for direction, destination in connections.items():
+    #         print(f"  {direction} -> {destination}")
+    #     print("-" * 20)  # Separator for readability
 
-def master_key(layout, treasure):
-    print("~*~*~*~*~*~*~*~*")
-    print("~* CAVE MAP *~*")
-    print("~*~*~*~*~*~*~*~*")
-    print("\n")
-
-    # Way to handle nested dictionaries (Rooms)
-    for location, connections in layout.items():
-        print(f"Location: {location}")
-        for direction, destination in connections.items():
-            print(f"  {direction} -> {destination}")
-        print("-" * 20)  # Separator for readability
-
-    print("\n")
-    print("~*~*~*~*~*~*~*~*")
-    print("~* ITEM MAP *~*")
-    print("~*~*~*~*~*~*~*~*")
-    print("\n")
+    # print("\n")
+    # print("~*~*~*~*~*~*~*~*")
+    # print("~* ITEM MAP *~*")
+    # print("~*~*~*~*~*~*~*~*")
+    # print("\n")
 
     # Way to handle flat dictionaries (Items)
     # Changed variable name from 'rooms' to 'location' to avoid confusion
-    for location, tool in treasure.items():
-        print(f"{location}: {tool}")
+    # for location, tool in treasure.items():
+        # print(f"{location}: {tool}")
 
 
 # Call the function with your defined dictionaries
-master_key(layout, treasure)
-
+# master_key(layout, treasure)
 
 
 

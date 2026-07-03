@@ -1,23 +1,21 @@
 import sys
 import time
 import os
-
 # --- IMPORTING YOUR CUSTOM MODULES ---
 from players import Character, Hero
 from emporium_structure import layout, treasure
 from creation_page import *  # Brings in any pre-made weapons/items
 
-
 # ==========================================
-# --- SYSTEM FUNCTIONS ---
+# --- SYSTEM FUNCTIONS ---                                                # --- SYSTEM FUNCTIONS --- #
 # ==========================================
 
-def clear_screen():
+def clear_screen():                                                  # clear_screen()
     """Clears the terminal screen for a fresh slate."""
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def typewriter_whole(text, delay=0.03):
+def typewriter_whole(text, delay=0.03):                              # typewriter_whole(text, delay=0.03)
     """Prints text one character at a time."""
     for char in text:
         print(char, end="")
@@ -25,7 +23,52 @@ def typewriter_whole(text, delay=0.03):
         time.sleep(delay)
 
 
-def typewriter_input(text, delay=0.03):
+def display_room_ui(room_name):                                      # display_room_ui(room_name)
+    """Dynamically draws the room UI frame, paths, and items."""
+    # 1. Format the title
+    title = f"{room_name.upper()}"
+
+    # 2. Draw Top Borders
+    print("\n*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*")
+    print("<" + "'" * 52 + ">")
+
+    # 3. Print Title Centered
+    print(f"|{title:^52}|")
+    print("|" + " " * 52 + "|")  # Blank spacing line
+
+    # 4. Check for Items on the floor!
+    if room_name in treasure:
+        item_text = f" YOU SEE A: {treasure[room_name].name}"
+        print(f"|{item_text:<52}|")
+        print("|" + " " * 52 + "|")  # Blank spacing line
+
+    # 5. Print Available Paths
+    print(f"|{' AVAILABLE PATHS:':<52}|")
+    for direction, destination in layout[room_name].items():
+        path_string = f"   > {direction}: {destination}"
+        print(f"|{path_string:<52}|")
+
+    # 6. Draw Bottom Borders # Possibly remove #
+    print("<" + "," * 52 + ">")
+    print("*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
+
+
+def display_action_ui():                                              # display_action_ui()
+    """Draws the command menu directly below the room UI."""
+    print(f"|{'--- COMMAND MENU ---':^52}|")
+    print("|" + " " * 52 + "|")
+    print(f"|{'  > move [direction]    > pick up':<52}|")
+    print(f"|{'  > equip [weapon]      > inventory':<52}|")
+    print(f"|{'  > inspect [item]      > attack':<52}|")  # Added inspect here
+    print(f"|{'  > barter              > .show_stats()':<52}|")
+
+    # Cap off the bottom of the UI
+    print("<" + "," * 52 + ">")
+    print("*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
+
+
+# Global Interceptor, always checking for input show_stats()
+def typewriter_input(text, delay=0.03):                                # typewriter_input(text, delay=0.03)
     """Types out a question, waits for input, and intercepts global commands."""
     while True:
         typewriter_whole(text, delay)
@@ -56,7 +99,7 @@ def typewriter_input(text, delay=0.03):
         return action
 
 
-def create_new_player():
+def create_new_player():                                             # create_new_player()
     """Gathers user input to dynamically create a new Hero instance."""
     p_name = input("What is your name? \n").title()
     p_role = input("What type of adventurer are you? \n").title()
@@ -77,41 +120,29 @@ def create_new_player():
 
 
 # ==========================================
-# --- GAME EXECUTION ---
+# --- GAME EXECUTION ---                                                  # ---PHASE 1: GAME EXECUTION --- #
 # ==========================================
+
 
 if __name__ == "__main__":
     clear_screen()
     welcoming_words = ("   --- CHARACTER CREATION ---\n"
-                       "Welcome to the Dungeon, you must have 2 people to enter. ")
+                       "Welcome to the Dungeon, brave soul. ")
 
     typewriter_whole(welcoming_words, 0.03)
 
     # --- PHASE 1: INTRO SEQUENCE ---
-    while True:
-        has_two = typewriter_input("\nDo you have two players in mind? yes/no \n", 0.03).lower()
-
-        if has_two == "yes":
-            print("Tell me who Player 1 is...")
-            hero1 = create_new_player()
-            time.sleep(1)
-            print("And now for Player 2...")
-            hero2 = create_new_player()
-            time.sleep(1)
-            break
-        elif has_two == "no":
-            print("Goodbye!")
-            quit()
-        else:
-            print("That response is INVALID. Please type 'yes' or 'no'.")
+    print("\nTell me...")
+    hero1 = create_new_player()
+    time.sleep(1)
 
     clear_screen()
     time.sleep(1)
 
-    intro_message = """Aww, two brave little weaklings ready to die, HAHAHA! Suit yourself.
+    intro_message = """Aww, a brave little weakling ready to die, HAHAHA! Suit yourself.
 Now, I wont tell you very much but one thing you should know is that
 every person that gains entry to this cave is given an ID CARD.
-Here are both of your ID cards. \n"""
+Here is your ID card. \n"""
 
     typewriter_whole(intro_message, 0.04)
     print("\n")
@@ -122,11 +153,10 @@ Here are both of your ID cards. \n"""
     hero1.show_stats()
     print("\n")
     time.sleep(2)
-    hero2.show_stats()
-    print("\n")
+
 
     enter_offer = ("Okay, now that you have your cards and you're already at the gates of the unknown,"
-                   " I think its about time you two got lost inside the darkness. \n")
+                   " I think its about time you got lost inside the darkness. \n")
     typewriter_whole(enter_offer, 0.03)
 
     while True:
@@ -134,7 +164,7 @@ Here are both of your ID cards. \n"""
 
         if enter == "yes":
             clear_screen()
-            typewriter_whole(" You and your friend are suddenly alone, no voice addressing you,"
+            typewriter_whole(" You are suddenly alone, no voice addressing you,"
                              " no weight hanging above. Just the empty darkness waiting for you "
                              "to fill its mouth.\n", 0.05)
             time.sleep(1)
@@ -146,34 +176,145 @@ Here are both of your ID cards. \n"""
             print("Answer the question! 'yes' or 'no'!")
 
     # ==========================================
-    # --- PHASE 2: CAVE EXPLORATION ---
+    # --- PHASE 2: CAVE EXPLORATION ---                                    # --- PHASE 2: CAVE EXPLORATION --- #
     # ==========================================
-
+    print("---------------------------------")
     current_room = "Cave Entrance"
+    print("---------------------------------")
 
+    #  GAME LOOP #
     while True:
-        print("\n" + "=" * 40)
-        print(f" LOCATION: {current_room}")
+        # 1. Paint the UI (Room first, then Actions)
+        display_room_ui(current_room)
+        display_action_ui()
 
-        # Look up the paths available in the current room from emporium_structure.py
-        available_paths = list(layout[current_room].keys())
-        print(f" PATHS: {', '.join(available_paths)}")
-        print("=" * 40)
-
+        # 2. Get the player's command
         action = typewriter_input("\nWhat would you like to do? \n", 0.02).strip().lower()
 
-        # Convert action to Title Case to match your dictionary keys (e.g., "Left")
-        direction = action.title()
+        # 3. Split the command into separate words (e.g., ["move", "left"])
+        words = action.split()
 
-        if direction in layout[current_room]:
-            current_room = layout[current_room][direction]
+        # If they just hit enter without typing anything, ignore it
+        if not words:
             clear_screen()
-            typewriter_whole(f"You cautiously move {direction}...\n", 0.03)
-            time.sleep(1)
+            continue
+
+        # The first word they typed is the primary command
+        command = words[0]
+
+        # --- THE COMMAND PARSER ---                                  #  --- THE COMMAND PARSER --- #
+
+        if command == "move":                                                       # Move
+            # Check if they actually typed a direction after "move"
+            if len(words) > 1:
+                direction = words[1].title()
+                if direction in layout[current_room]:
+                    current_room = layout[current_room][direction]
+                    clear_screen()
+                    typewriter_whole(f"You cautiously move {direction} into a different room...\n", 0.03)
+                    time.sleep(1)
+                else:
+                    clear_screen()
+                    print(f"\n*** You can't move '{direction}' from here. ***\n")
+            else:
+                clear_screen()
+                print("\n*** Move where? (Try 'move left' or 'move straight') ***\n")
+
+        elif command == "inspect":                                                  # Inspect
+            if len(words) > 1:
+                target_name = " ".join(words[1:]).lower()
+                found = False
+
+                # Check items in the bag first
+                for item in hero1.bag.purse:
+                    if item.name.lower() == target_name:
+                        clear_screen()
+                        print(f"\n--- INSPECTING: {item.name.upper()} ---")
+                        print(f"\n{item.description}\n")
+                        typewriter_input("Press Enter to continue...", 0.01)
+                        found = True
+                        break
+
+                # If not in bag, check the room
+                if not found and current_room in treasure:
+                    item_in_room = treasure[current_room]
+                    if item_in_room.name.lower() == target_name:
+                        clear_screen()
+                        print(f"\n--- INSPECTING: {item_in_room.name.upper()} ---")
+                        print(f"\n{item_in_room.description}\n")
+                        typewriter_input("Press Enter to continue...", 0.01)
+                        found = True
+
+                if not found:
+                    clear_screen()
+                    print(f"\n*** You don't see any '{target_name}' to inspect. ***\n")
+            else:
+                clear_screen()
+                print("\n*** Inspect what? (Try 'inspect crowbar') ***\n")
+            clear_screen()
+
+        # Controls picking up items #
+        elif command == "pick" and len(words) > 1 and words[1] == "up":                # Pick up
+            # Does this room actually have treasure?
+            if current_room in treasure:
+                found_item = treasure[current_room]
+                clear_screen()
+                print("\n")
+                # hero1 automatically gets the item!
+                hero1.pick_up(found_item)
+                # Remove the item from the room
+                del treasure[current_room]
+                print("\n")
+                time.sleep(2)
+                clear_screen()
+            else:
+                clear_screen()
+                print("\n*** There is nothing to pick up here. ***\n")
+
+
+        elif command == "equip":                                                       # Equip
+            if len(words) > 1:
+                # Join the words together (e.g., "Iron Sword")
+                weapon_name = " ".join(words[1:]).title()
+                clear_screen()
+                print("\n")
+                # hero1 automatically equips it
+                hero1.equip(weapon_name)
+                print("\n")
+                time.sleep(2)
+                clear_screen()
+            else:
+                clear_screen()
+                print("\n*** Equip what? (Try 'equip knife') ***\n")
+
+        elif command == "attack":                                                       # Attack
+            clear_screen()
+            print("\n*** There is nothing to attack yet! ***\n")
+
+        elif command == "barter":                                                        # Barter
+            clear_screen()
+            print("\n*** There is no one to trade with right now. ***\n")
+        elif command == "inventory" or command == "bag":
+            clear_screen()
+            print("-------------------------------")
+            print(f"\n--- {hero1.name}'s Inventory ---")
+
+            if len(hero1.bag.purse) == 0:
+                print("Your bag is empty.")
+            else:
+                for item in hero1.bag.purse:
+                    print(f" - {item.name}")
+
+            print(f"Capacity: {len(hero1.bag.purse)}/{hero1.bag.capacity}")
+            print("-------------------------------\n")
+
+            typewriter_input("Press Enter to continue...", 0.01)
+            clear_screen()
+
         else:
-            print("\nYou can't go that way, or that is an invalid command.")
-
-
+            # If the command wasn't move, pick up, equip, attack, or barter (and wasn't intercepted as a global command)
+            clear_screen()
+            print(f"\n*** '{command}' is not a valid action. ***\n")
 
 
 
