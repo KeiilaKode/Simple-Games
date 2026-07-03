@@ -1,42 +1,21 @@
 import time
 from visitor import Visitor
-from ticket import Ticket
-from employee import Employee, GateKeeper
-from mammal import Lion, Tiger, Leopard, Gorilla, Chimpanzee, Black_Bear, Kodiak_Bear
-from animal import Terrestrial, Aquatic, Aerial
-from enclosure import Building, Terrestrial_Enclosure, Aerial_Enclosure, Aquatic_Enclosure
-from aerial import Eagle, Turkey, Parrot, Ostrich, Falcon, Peacock
-from aquatic import Fish, Octopus, Dolphin, Squid, Star_fish, Shark, Sea_Urchin
-
-
+from zoo_builder import setup_zoo
+from animal import Animal
 ### RUN THE FIRST CHAPTER  * ### * CREATING VISITORS ###
 if __name__ == "__main__":
-    # --- 1. BUILD THE ZOO BUILDINGS--- # NEED TO CREATE MORE BUILDINGS AND ENCLOSURES
-    enter_center = Building("Enter Center")
-    lions_den = Terrestrial_Enclosure(name="Lions Den", wing="Carnivore Wing")
-    top_watch = Aerial_Enclosure(name="The Point", wing="Aviary")
+    # 1. Receive the entire loaded zoo
+    active_zoo = setup_zoo()
 
-    # --- 2. HIRE EMPLOYEES & ASSIGN THEM --- # # NEED TO CREATE MORE EMPLOYEES
-    katie = GateKeeper(name="Katie", job_title="Gate Cashier")
-    richard = Employee(name="Richard", job_title="Lion Tender")
+    # 2. Pull Katie out of the zoo's roster so she can run the front gate!
+    katie = active_zoo.get_employee("Katie")
 
-    enter_center.assign_employee(katie)
-    lions_den.assign_employee(richard)
-
-    # --- 3. BREED ANIMALS --- # # NEED TO CREATE MORE ANIMALS OF ALL CLASSES AVAILABLE
-    billy = Lion("Billy", age=4)
-    eli = Eagle("Eli", age=2)
-
-    # --- 4. ASSIGN THE ANIMALS TO BUILDINGS --- # # NEED TO CREATE MORE BUILDINGS
-    lions_den.add_creature(billy)
-    top_watch.add_creature(eli)
-
-    # --- 5. STARTS THE TERMINAL OUTPUT --- # ### NEED TO ADD MORE HOTKEY OPTIONS, TO CHECK ENCLOSURES AND BUILDINGS FOR ANIMALS AND EMPLOYEES ###
-         ### GAME LOGIC AND LOOP ###
-
-    print("--- ZOO SIMULATION STARTED ---")
-    print("Type 'q' at the name prompt to quit.")
-    print("Type 'r' to see amount of tickets sold so far.\n")
+    print(f"\n--- {active_zoo.name.upper()} SIMULATION STARTED ---")
+    print("Option 1: Type 'q' to quit.")
+    print("Option 2: Type 'r' to see the report.")
+    print("Option 3: Type 'show' to see the list of current animals at the zoo.")
+    print("Option 4: Enter your name.")
+    print("-" * 33 + "\n")
     sale_number = 0
     # 2. The Continuous Loop (Simulating a line of people)
     while True:
@@ -49,6 +28,12 @@ if __name__ == "__main__":
         elif visitor_name.lower() == 'q':
             print("Closing the zoo gates!")
             break
+
+        elif visitor_name.lower() == 'show':
+            Animal.show_all()
+            continue
+
+
         visitor_money = int(input(f"How much money does {visitor_name} have? $"))
         print("-" * 33 + "\n")
 

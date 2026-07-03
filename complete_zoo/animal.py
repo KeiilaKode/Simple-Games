@@ -15,6 +15,17 @@ class Animal:
         return self.__str__()
     def __str__(self):
         return f"{self.species} named {self.name}, Age:{self.age}, Hunger:{self.hunger_lvl}"
+
+    # --- ADD THIS NEW BLOCK ---
+    @classmethod
+    def show_all(cls):
+        print("\n--- MASTER ANIMAL LIST ---")
+        print(f"Total Animals: {len(cls.all_animals)}")
+        for animal in cls.all_animals:
+            # When you print the animal object, Python automatically uses your __str__ method!
+            print(animal)
+        print("-" * 33 + "\n")
+
 # Child class Terrestrial from Animal
 class Terrestrial(Animal):
     all_terrestrials = []
