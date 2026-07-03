@@ -77,7 +77,10 @@ class GateKeeper(Employee):
         self.adult_tickets_sold = 0
         self.child_tickets_sold = 0
 
-    def report(self, current_visitors):
+        # Added var to class so it keeps track of visitors instead of the game loop.
+        self.visitors_in_the_zoo = 0
+
+    def report(self):
 
         total_tickets = self.adult_tickets_sold + self.child_tickets_sold
 
@@ -87,7 +90,7 @@ class GateKeeper(Employee):
             f"{self.name} has sold {self.adult_tickets_sold} 'Adult' tickets and {self.child_tickets_sold} 'Child' tickets, "
             f"totaling {total_tickets} tickets in all.")
         print(f"Total Money Made: ${self.register}")
-        print(f"Current Zoo Capacity: {current_visitors} visitors are inside.")
+        print(f"Current Zoo Capacity: {self.visitors_in_the_zoo} visitors are inside.")
         print("-" * 33, "\n")
 
 
@@ -107,6 +110,8 @@ class GateKeeper(Employee):
         if money_received == total_cost:
             # Put money in the building's register (Eventually)
             self.register += money_received
+            total_just_bought = num_adults + num_kids
+            self.visitors_in_the_zoo += total_just_bought
 
 
             # 4. Generate the tickets on the fly and give them to the visitor AND update trackers
@@ -146,7 +151,7 @@ if __name__ == "__main__":
     print("Type 'r' to see amount of tickets sold so far.\n")
 
     sale_number = 0
-    visitors_in_the_zoo = 0
+
 
     # 2. The Continuous Loop (Simulating a line of people)
     while True:
@@ -155,7 +160,7 @@ if __name__ == "__main__":
         visitor_name = input("Enter the next visitor's name: ").title()
 
         if visitor_name.lower() == 'r':
-            katie.report(visitors_in_the_zoo)
+            katie.report()
             continue
         elif visitor_name.lower() == 'q':
             print("Closing the zoo gates!")
@@ -188,7 +193,7 @@ if __name__ == "__main__":
             continue
 
         sale_number += 1
-        visitors_in_the_zoo += len(current_visitor.tickets)
+
         # 4. Check the aftermath to ensure logic worked
         time.sleep(1)
         print("\n*---* Events Happening *---*")
