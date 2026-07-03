@@ -33,8 +33,16 @@ if __name__ == "__main__":
             Animal.show_all()
             continue
 
+            # --- ASK HOW MUCH THEY HAVE WITH INPUT VALIDATION LOOP ---
+        while True:
+            try:
+                visitor_money = int(input(f"How much money does {visitor_name} have? $"))
+                # If the line above works without crashing, break out of this mini-loop!
+                break
+            except ValueError:
+                # If it crashes (because they typed letters/symbols), catch it and print this:
+                print("Invalid input! Please enter a whole number (e.g., 50). No letters allowed.\n")
 
-        visitor_money = int(input(f"How much money does {visitor_name} have? $"))
         print("-" * 33 + "\n")
 
         # Instantiate the Visitor
@@ -45,12 +53,18 @@ if __name__ == "__main__":
         katie.greet(current_visitor)
 
 
-        # Ask for ticket counts
-        adults = int(input("How many ADULT tickets are needed? "))
-        time.sleep(.5)
-        kids = int(input("And how many CHILD tickets are needed? "))
-        print("\n")
-        time.sleep(.5)
+        # --- ASK HOW MANY TICKETS THEY WANT OF EACH WITH INPUT VALIDATION --- #
+        while True:
+            try:
+                adults = int(input("How many ADULT tickets are needed? "))
+                time.sleep(.5)
+                kids = int(input("And how many CHILD tickets are needed? "))
+                print("\n")
+                time.sleep(.5)
+                break
+            except ValueError:
+                # If it crashes (because they typed letters/symbols), catch it and print this:
+                print("Invalid input! Please enter a whole number (e.g., 50). No letters allowed.\n")
 
         # Process the sale
         transaction_successful = katie.sell_tickets(visitor=current_visitor, num_adults=adults, num_kids=kids)
