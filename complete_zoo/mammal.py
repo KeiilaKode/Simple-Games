@@ -1,5 +1,5 @@
-from complete_zoo.animal import Terrestrial
-from enclosure import Building
+from animal import Terrestrial
+
 
        ### LAND ANIMALS ###
 

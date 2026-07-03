@@ -1,7 +1,5 @@
 from animal import Aerial
-
 # FLYING ANIMALS #
-
 # 1
 # Child Class Parrot, inherits from Aerial, inherits from Animal: Will make around 7 different Aerial child classes
 class Parrot(Aerial):

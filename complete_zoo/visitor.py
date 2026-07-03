@@ -1,5 +1,5 @@
 
-# Visitors
+# Visitors Class
 class Visitor:
     def __init__(self, name, money):
         self.name = name

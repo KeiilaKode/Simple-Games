@@ -1,7 +1,5 @@
 from animal import Aquatic
-
-# WATER ANIMALS #
-
+# WATER ANIMALS
 # 1
 # Abstract Child Class Fish, inherits from Aquatic, inherits from Animal: Will make around 7 different Aerial child classes
 class Fish(Aquatic):

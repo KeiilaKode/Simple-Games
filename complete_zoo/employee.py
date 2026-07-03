@@ -1,6 +1,4 @@
 from ticket import Ticket
-from visitor import Visitor
-from enclosure import Building, Terrestrial_Enclosure
 import time
 # Employees
 class Employee:

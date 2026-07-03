@@ -1,4 +1,4 @@
-# Tickets
+# Tickets class
 class Ticket:
 
     def __init__(self, ticket_type):

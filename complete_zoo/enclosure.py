@@ -1,3 +1,5 @@
+from animal import Terrestrial, Aerial, Aquatic
+
 # Abstract Parent Class
 class Structure:
     def __init__(self, name):
@@ -26,9 +28,9 @@ class Building(Structure):
         employee.wing = self.wing
 
 
-### HOUSING FOR THE LAND ANIMALS ###
+# Child Classes Inherits from Building:
 
-# Child Class Inherits from Building
+### HOUSING FOR THE LAND ANIMALS ###
 class Terrestrial_Enclosure(Building):
     all_Terrestrial_Enclosures = []
     mammals = []
@@ -45,10 +47,14 @@ class Terrestrial_Enclosure(Building):
 
     # ONLY Enclosures get this method
     def add_creature(self, creature):
+        # SMART CHECK: Is this creature actually a land animal?
+        if not isinstance(creature, Terrestrial):
+            print(f"Error: {creature.name} is not a land animal and cannot go in {self.name}!")
+            return
+
         if len(self.creatures) < self.max_capacity:
             self.creatures.append(creature)
             self.capacity += 1
-            Terrestrial_Enclosure.mammals.append(creature)
         else:
             print(f"{self.name} is full!")
 
@@ -56,9 +62,61 @@ class Terrestrial_Enclosure(Building):
         return self.__str__()
 
     def __str__(self):
-        return (f"Enclosure: The {self.name} in the {self.wing} wing | "
-                f"Creatures: {len(self.creatures)} | "
-                f"Employees: {len(self.assigned_employees)}")
+        return (f" Enclosure: {self.name} |"
+                f" Creatures: {len(self.creatures)} |"
+                f" Employees: {len(self.assigned_employees)}")
+
+
+### 2. HOUSING FOR BIRDS ###
+class Aerial_Enclosure(Building):
+    all_Aerial_Enclosures = []
+
+    def __init__(self, name, wing):
+        super().__init__(name=name, wing=wing)
+        self.creatures = []
+        self.max_capacity = 15  # Maybe aviaries can hold more!
+        Aerial_Enclosure.all_Aerial_Enclosures.append(self)
+
+    def add_creature(self, creature):
+        # SMART CHECK: Is this creature actually a bird?
+        if not isinstance(creature, Aerial):
+            print(f"Error: {creature.name} cannot fly and cannot go in {self.name}!")
+            return
+
+        if len(self.creatures) < self.max_capacity:
+            self.creatures.append(creature)
+            self.capacity += 1
+        else:
+            print(f"{self.name} is full!")
+
+    def __str__(self):
+        return f"Aviary: {self.name} | Creatures: {len(self.creatures)} | Employees: {len(self.assigned_employees)}"
+
+
+### 3. HOUSING FOR WATER ANIMALS ###
+class Aquatic_Enclosure(Building):
+    all_Aquatic_Enclosures = []
+
+    def __init__(self, name, wing):
+        super().__init__(name=name, wing=wing)
+        self.creatures = []
+        self.max_capacity = 5  # Maybe tanks hold fewer animals
+        Aquatic_Enclosure.all_Aquatic_Enclosures.append(self)
+
+    def add_creature(self, creature):
+        # SMART CHECK: Is this creature actually a water animal?
+        if not isinstance(creature, Aquatic):
+            print(f"Error: {creature.name} cannot swim and will drown in {self.name}!")
+            return
+
+        if len(self.creatures) < self.max_capacity:
+            self.creatures.append(creature)
+            self.capacity += 1
+        else:
+            print(f"{self.name} is full!")
+
+    def __str__(self):
+        return f"Aquarium: {self.name} | Creatures: {len(self.creatures)} | Employees: {len(self.assigned_employees)}"
 
 
 

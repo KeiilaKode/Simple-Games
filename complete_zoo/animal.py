@@ -1,4 +1,4 @@
-from enclosure import Building
+
 
 # Abstract Parent class Animal
 class Animal:
