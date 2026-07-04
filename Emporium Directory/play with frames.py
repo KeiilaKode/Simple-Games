@@ -7,6 +7,8 @@
 # print("<" + "," * 52 + ">")
 # print("*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
 
+
+# One type of frame/box
 class Box:
     def __init__(self, width, height):
         self.width = width
@@ -21,6 +23,7 @@ class Box:
             print("|" + "".join(row) + "|" + " " * 141 + "|" + "".join(row) + "|")
         print(frame)
 
+    # Second type of frame/box
     def display_boxa(self):
         frame = "X" + self.width * "=" + "X"
         center = "O" + self.width * "-" + "O"
@@ -45,17 +48,36 @@ box5.gen_box()
 
 # Call the functions alternating, starting with display_boxa(), 9 times in total to make a continuous latter effect
 
+
+
+
+#box3.display_boxa()
+# box4.display_box()
+
+#
+# box1.display_box()
+#box3.display_boxa()
+# box4.display_box()
+# box5.display_boxa()
+
+# Third type of frame/box
+def dual_menu():
+    #print("\n")
+    print(
+        "*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*" + "*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*")  # Top Boarders
+    print("<" + "'" * 52 + ">" + "<" + "'" * 52 + ">")
+    print(f"|" + "I:" + " " * 48 + ":I" + "|" + "|" + "I:" + " " * 48 + ":I" + "|")
+    print(f"|" + "I:" + " " * 48 + ":I" + "|" + "|" + "I:" + " " * 48 + ":I" + "|")
+    print(f"|" + "I:" + " " * 48 + ":I" + "|" + "|" + "I:" + " " * 48 + ":I" + "|")
+    print(f"|" + "I:" + " " * 48 + ":I" + "|" + "|" + "I:" + " " * 48 + ":I" + "|")
+    print("<" + "," * 52 + ">" + "<" + "," * 52 + ">")  # Bottom Borders
+    print(
+        "*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*" + "*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
 box2.display_boxa()
 box1.display_box()
-box3.display_boxa()
-box4.display_box()
-box5.display_boxa()
-
+#dual_menu()
 box1.display_box()
-box3.display_boxa()
-box4.display_box()
 box5.display_boxa()
-
 
 
 
