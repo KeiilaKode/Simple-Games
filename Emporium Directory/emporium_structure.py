@@ -1,65 +1,107 @@
 from creation_page import *
 
-layout:dict = {
-        "Cave Entrance": {"Left": "Upper Tunnel",
-                          "Straight": "Center Room",
-                          "Right": "Rock Hallway",
-                          "Stay": "Cave Entrance"},
-        "Upper Tunnel": {"Back": "Cave Entrance",
-                         "Stay": "Upper Tunnel",
-                         "Forward": "Blocked by mysterious danger"},
 
-        "Center Room": {"Left": "Attic Ledge",
-                        "Right": "Vine Room",
-                        "Back": "Cave Entrance",
-                        "Stay": "Center Room"},
-        "Attic Ledge": {"Forward": "Blocked by Bolder---",
-                        "Back": "Center Room",
-                        "Stay": "Attic Ledge"},
+# TERMINAL GAME ROOM LAYOUT #
+layout: dict = {
+    "Cave Entrance": {"Left": "Upper Tunnel",
+                      "Forward": "Center Room",
+                      "Right": "Rock Hallway",
+                      "Stay": "Cave Entrance"},
 
-        "Rock Hallway": {"Left": "Hide-hole",
-                         "Right": "Swamp Water Shallows",
-                         "Back": "Cave Entrance",
-                         "Forward": "Rock Hallway Deep",
-                         "Stay": "Rock Hallway"},
+    "Upper Tunnel": {"Back": "Cave Entrance",
+                     "Stay": "Upper Tunnel",
+                     "Forward": "Crest Point Cavern"},  # Blocked by mysterious danger
 
-        "Path to Emporium": {"Forward": "Hole Blocked Path---Emporium Shop",
-                             "Back": "Center Room",
-                             "Stay": "Path to Emporium"},
+    "Center Room": {"Left": "Attic Ledge",
+                    "Right": "Vine Room",
+                    "Back": "Cave Entrance",
+                    "Stay": "Center Room",
+                    "Forward": "Path to Emporium"},
 
-        "Vine Room": {"Forward": "Blocked by Vines---Darkness Forest",
-                      "Back": "Center Room",
-                      "Stay": "Vine Room"},
+    "Crest Point Cavern": {"Back": "Upper Tunnel",  # Knock down bolder to allow attic ledge access to Brimstone Bay
+                           "Left": "The Lookout"},
 
-        "Hide-hole": {"Right": "Rock Hallway",
-                      "Stay": "Hide-hole"},
+    "The Lookout": {"Back": "Crest Point Cavern",
+                    "Stay": "The Lookout"},
 
-        "Swamp Water Shallows": {"Forward": "Swamp Water Center",
-                                 "Back": "Rock Hallway",
-                                 "Stay": "Swamp Water Shallows"},
+    "Attic Ledge": {"Forward": "Brimstone Bay",  # Blocked by Bolder---
+                    "Back": "Center Room",
+                    "Stay": "Attic Ledge",
+                    "Right": "Shadow Pit"},  # Jumps down into room
 
-        "Swamp Water Center": {"Forward": "Secret Room",
-                               "Back": "Swamp Water Shallows",
-                               "Stay": "Swamp Water Center"},
+    "Shadow Pit": {"Right": "Path to Emporium",
+                   "Left": "Ancient Treasure Room",
+                   "Stay": "Shadow Pit"},
 
-        "Secret Room": {"Back": "Swamp Water Center",
-                        "Stay": "Secret Room"},
+    "Ancient Treasure Room": {"Back": "Shadow Pit",
+                              "Stay": "Ancient Treasure Room"},
 
-        "Rock Hallway Deep": {"Right": "Animal's Cove",
-                              "Straight": "Hallway's End"},
+    "Brimstone Bay": {"Back": "Attic Ledge",
+                      "Stay": "Brimstone Bay"},
 
-        "Animal's Cove": {"Back": "Rock Hallway Deep",
-                          "Stay": "Animal's Cove"},
+    "Rock Hallway": {"Left": "Hide-hole",
+                     "Right": "Swamp Water Shallows",
+                     "Back": "Cave Entrance",
+                     "Forward": "Rock Hallway Deep",
+                     "Stay": "Rock Hallway"},
 
-        "Hallway's End": {"Right": "Fungus Trails",  # Still must do
-                          "Left": "Rock Wall"},
-        "Rock Wall": {"back": "Hallway's End"},
+    "Path to Emporium": {"Forward": "Mildred's Emporium",  # Mildred's Emporium # hole blocked path #
+                         "Back": "Center Room",
+                         "Stay": "Path to Emporium",
+                         "Left": "Shadow Pit"},
 
-        "Mildred's Emporium": {"Back": "Path to Emporium",
-                               "Stay": "Mildred's Emporium"},
-        "Fungus Trails": {"Left": "Hallway's End",
-                          "forward": "NOT SURE YET" }
-    }
+    "Vine Room": {"Forward": "Secret Garden Lair", # Secret Garden Lair accessible with left from Rock hallway deep Blocked by Vines---Darkness Forest
+                  "Back": "Center Room",
+                  "Stay": "Vine Room",
+                  "Right": "Rock Hallway Deep"},
+
+    "Secret Garden Lair": {"Back": "Vine Room",
+                           "Stay": "Secret Garden Lair",
+                           "Right": "Rock Hallway Deep"},
+
+    "Hide-hole": {"Back": "Rock Hallway",
+                  "Stay": "Hide-hole"},
+
+    "Swamp Water Shallows": {"Forward": "Swamp Water Center",
+                             "Back": "Rock Hallway",
+                             "Stay": "Swamp Water Shallows"},
+
+    "Swamp Water Center": {"Forward": "Secret Room",
+                           "Back": "Swamp Water Shallows",
+                           "Stay": "Swamp Water Center"},
+
+    "Secret Room": {"Back": "Swamp Water Center",
+                    "Stay": "Secret Room"},
+
+    "Rock Hallway Deep": {"Right": "Animal's Cove",  # added left for secret garden room
+                          "Forward": "Hallway's End",
+                          "Back": "Rock Hallway",
+                          "Stay": "Rock Hallway Deep",
+                          "Left": "Secret Garden Lair"},
+
+    "Animal's Cove": {"Back": "Rock Hallway Deep",
+                      "Stay": "Animal's Cove"},
+
+    "Hallway's End": {"Right": "Fungus Trails",
+                      "Left": "Rock Wall",
+                      "Forward": "Small Passage",
+                      "Back": "Rock Hallway Deep",
+                      "Stay": "Hallway's End"},
+
+    "Rock Wall": {"back": "Hallway's End"},
+
+    "Fungus Trails": {"Back": "Hallway's End",
+                      "Forward": "NOT SURE YET",
+                      "Stay": "Fungus Trails"},
+
+    "Small Passage": {"Forward": "Mildred's Emporium",
+                      "Stay": "Small Passage",
+                      "Back": "Hallway's End"},
+
+    "Mildred's Emporium": {"Back": "Path to Emporium",  # Hole Blocked Path
+                           "Right": "Small Passage",
+                           "Stay": "Mildred's Emporium"},
+}
 
 
 # No quotation marks around the values as they are now real objects.

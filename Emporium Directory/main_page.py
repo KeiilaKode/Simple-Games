@@ -1,3 +1,4 @@
+from my_toolkit.term_tools import Box, dual_menu
 import sys
 import time
 import os
@@ -67,7 +68,7 @@ def display_action_ui():                                              # display_
     print("*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
 
 
-# Global Interceptor, always checking for input show_stats()
+# Global Interceptor
 def typewriter_input(text, delay=0.03):                                # typewriter_input(text, delay=0.03)
     """Types out a question, waits for input, and intercepts global commands."""
     while True:
@@ -126,8 +127,14 @@ def create_new_player():                                             # create_ne
 
 if __name__ == "__main__":
     clear_screen()
-    welcoming_words = ("   --- CHARACTER CREATION ---\n"
-                       "Welcome to the Dungeon, brave soul. ")
+    box1 = Box(15, 8)
+    box2 = Box(173, 4)
+    box2.gen_box()
+    box2.display_boxa()
+
+    print("\n")
+    welcoming_words = ("   --- WELCOME TO CAVE ELSEWHERE ---\n"
+                       "This is where you come to die, brave soul. ")
 
     typewriter_whole(welcoming_words, 0.03)
 
@@ -138,6 +145,11 @@ if __name__ == "__main__":
 
     clear_screen()
     time.sleep(1)
+
+
+
+    box2.display_boxa()
+
 
     intro_message = """Aww, a brave little weakling ready to die, HAHAHA! Suit yourself.
 Now, I wont tell you very much but one thing you should know is that
@@ -150,6 +162,8 @@ Here is your ID card. \n"""
     clear_screen()
 
     # These will now use the show_stats() you pasted into players.py
+    box2.display_boxa()
+    print("\n")
     hero1.show_stats()
     print("\n")
     time.sleep(2)
@@ -161,12 +175,15 @@ Here is your ID card. \n"""
 
     while True:
         enter = typewriter_input(" Are you ready to see what awaits you..? yes/no \n", 0.03).lower()
+        dual_menu()
 
         if enter == "yes":
             clear_screen()
+
+            box2.display_boxa()
             typewriter_whole(" You are suddenly alone, no voice addressing you,"
                              " no weight hanging above. Just the empty darkness waiting for you "
-                             "to fill its mouth.\n", 0.05)
+                             "to fill its mouth.", 0.05)
             time.sleep(1)
             break
         elif enter == "no":
@@ -178,7 +195,7 @@ Here is your ID card. \n"""
     # ==========================================
     # --- PHASE 2: CAVE EXPLORATION ---                                    # --- PHASE 2: CAVE EXPLORATION --- #
     # ==========================================
-    print("---------------------------------")
+    #print("---------------------------------")
     current_room = "Cave Entrance"
     print("---------------------------------")
 
@@ -211,13 +228,16 @@ Here is your ID card. \n"""
                 if direction in layout[current_room]:
                     current_room = layout[current_room][direction]
                     clear_screen()
+                    box1.display_box()
                     typewriter_whole(f"You cautiously move {direction} into a different room...\n", 0.03)
                     time.sleep(1)
                 else:
                     clear_screen()
+                    box1.display_box()
                     print(f"\n*** You can't move '{direction}' from here. ***\n")
             else:
                 clear_screen()
+                box1.display_box()
                 print("\n*** Move where? (Try 'move left' or 'move straight') ***\n")
 
         elif command == "inspect":                                                  # Inspect
@@ -247,9 +267,11 @@ Here is your ID card. \n"""
 
                 if not found:
                     clear_screen()
+                    box1.display_box()
                     print(f"\n*** You don't see any '{target_name}' to inspect. ***\n")
             else:
                 clear_screen()
+                box1.display_box()
                 print("\n*** Inspect what? (Try 'inspect crowbar') ***\n")
             clear_screen()
 
@@ -269,9 +291,10 @@ Here is your ID card. \n"""
                 clear_screen()
             else:
                 clear_screen()
+                box1.display_box()
                 print("\n*** There is nothing to pick up here. ***\n")
 
-
+        # NEED TO DO: INPUT VALIDATION needs to be here, cause if u attempt to equip a non weapon, the game crashes #
         elif command == "equip":                                                       # Equip
             if len(words) > 1:
                 # Join the words together (e.g., "Iron Sword")
@@ -285,14 +308,17 @@ Here is your ID card. \n"""
                 clear_screen()
             else:
                 clear_screen()
+                box1.display_box()
                 print("\n*** Equip what? (Try 'equip knife') ***\n")
 
         elif command == "attack":                                                       # Attack
             clear_screen()
+            box1.display_box()
             print("\n*** There is nothing to attack yet! ***\n")
 
         elif command == "barter":                                                        # Barter
             clear_screen()
+            box1.display_box()
             print("\n*** There is no one to trade with right now. ***\n")
         elif command == "inventory" or command == "bag":
             clear_screen()
