@@ -4,7 +4,7 @@ import time
 import os
 # --- IMPORTING YOUR CUSTOM MODULES ---
 from players import Character, Hero
-from emporium_structure import layout, treasure
+from emporium_structure import layout, treasure, descriptions
 from creation_page import *  # Brings in any pre-made weapons/items
 
 # ==========================================
@@ -37,6 +37,24 @@ def display_room_ui(room_name):                                      # display_r
     print(f"|{title:^52}|")
     print("|" + " " * 52 + "|")  # Blank spacing line
 
+    # new addition starts here
+    if room_name in descriptions:
+        desc_text = descriptions[room_name]
+
+        # This breaks long sentences into pieces that are maximum 46 characters long
+        words = desc_text.split()
+        current_line = ""
+        for word in words:
+            if len(current_line) + len(word) + 1 <= 46:
+                current_line += (word + " ")
+            else:
+                print(f"|  {current_line:<48}  |")
+                current_line = word + " "
+        if current_line:
+            print(f"|  {current_line:<48}  |")
+
+        print("|" + " " * 52 + "|")  # Blank spacing line
+    # new addition ends here
     # 4. Check for Items on the floor!
     if room_name in treasure:
         item_text = f" YOU SEE A: {treasure[room_name].name}"

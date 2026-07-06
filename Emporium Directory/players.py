@@ -45,9 +45,6 @@ class Character:
         print("<" + "," * 52 + ">")  # Bottom Borders
         print("*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
 
-
-
-
     def equip(self, weapon):
         if weapon in self.bag.purse:
             self.weapon = weapon

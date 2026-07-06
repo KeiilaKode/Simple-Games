@@ -90,10 +90,9 @@ layout: dict = {
                       "Back": "Rock Hallway Deep",
                       "Stay": "Hallway's End"},
 
-    "Rock Wall": {"back": "Hallway's End"},
+    "Rock Wall": {"Back": "Hallway's End"},
 
     "Fungus Trails": {"Back": "Hallway's End",
-                      "Forward": "NOT SURE YET",
                       "Stay": "Fungus Trails"},
 
     "Small Passage": {"Forward": "Mildred's Emporium",
@@ -129,12 +128,10 @@ def validate_map(layout, starting_room):
                 if next_room != room and "NOT SURE" not in next_room:
                     stack.append(next_room)
 
-    # 3. Find the bugs by comparing the sets!
 
-    # Unreachable: Rooms in the layout that the player can't walk to
     unreachable = all_defined_rooms - reachable_rooms
 
-    # Missing Entries: Rooms we can walk to, but don't have a layout entry created yet
+
     missing = reachable_rooms - all_defined_rooms
 
     # --- Print the Report ---

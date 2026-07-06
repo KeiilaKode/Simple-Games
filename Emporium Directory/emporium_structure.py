@@ -88,10 +88,9 @@ layout: dict = {
                       "Back": "Rock Hallway Deep",
                       "Stay": "Hallway's End"},
 
-    "Rock Wall": {"back": "Hallway's End"},
+    "Rock Wall": {"Back": "Hallway's End"},
 
     "Fungus Trails": {"Back": "Hallway's End",
-                      "Forward": "NOT SURE YET",
                       "Stay": "Fungus Trails"},
 
     "Small Passage": {"Forward": "Mildred's Emporium",
@@ -116,33 +115,60 @@ treasure: dict = {
     "Swamp Water Shallows": sharpening_stone
 }
 
-# def master_key(layout, treasure):
-#     print("~*~*~*~*~*~*~*~*")
-#     print("~* CAVE MAP *~*")
-#     print("~*~*~*~*~*~*~*~*")
-#     print("\n")
-#
-#     # Way to handle nested dictionaries (Rooms)
-#     # for location, connections in layout.items():
-    #     print(f"Location: {location}")
-    #     for direction, destination in connections.items():
-    #         print(f"  {direction} -> {destination}")
-    #     print("-" * 20)  # Separator for readability
 
-    # print("\n")
-    # print("~*~*~*~*~*~*~*~*")
-    # print("~* ITEM MAP *~*")
-    # print("~*~*~*~*~*~*~*~*")
-    # print("\n")
+# DICTIONARY OF ROOM MESSAGES TO BE PRINTED FOR ENTERING EACH ROOM #
 
-    # Way to handle flat dictionaries (Items)
-    # Changed variable name from 'rooms' to 'location' to avoid confusion
-    # for location, tool in treasure.items():
-        # print(f"{location}: {tool}")
+# --- ROOM DESCRIPTIONS ---
+descriptions: dict = {
+    "Cave Entrance": "The gaping mouth of the cavern looms before you. Cold air whispers from the blackness within.",
 
+    "Upper Tunnel": "The ceiling low here, forcing you to stoop. Loose gravel crunches under your boots.",
 
-# Call the function with your defined dictionaries
-# master_key(layout, treasure)
+    "Center Room": "A massive subterranean chamber. Water drips slowly from stalactites high above, echoing in the dark.",
+
+    "Crest Point Cavern": "The cavern opens wide, revealing jagged rocky ledges. A massive boulder hangs precariously over a drop.",
+
+    "The Lookout": "A high, narrow stone ledge overlooking a vast, pitch-black abyss. The wind howls aggressively up here.",
+
+    "Attic Ledge": "You stand on a dusty stone platform high above the Center Room. A heavy boulder completely blocks a passage forward.",
+
+    "Shadow Pit": "A dark, sunken depression where shadows seem to twist and move on their own. The air feels heavy and unnatural.",
+
+    "Ancient Treasure Room": "Dust settles over crumbled pedestals. Though stripped of its golden glory long ago, old energy lingers.",
+
+    "Brimstone Bay": "The smell of sulfur and intense heat chokes your lungs. Steam rises from deep cracks in the floor.",
+
+    "Rock Hallway": "A natural corridor made of rough, jagged stone. The path splits into darkness ahead.",
+
+    "Path to Emporium": "A worn, old pathway carved out by feet long ago. A bizarre purple glow emanates from further down the passage.",
+
+    "Vine Room": "Thick, thorny vines weave across the walls like frozen snakes. They block a dark thicket to the forward direction.",
+
+    "Secret Garden Lair": "An impossible underground grove. Bioluminescent moss coats the floor, casting an eerie emerald glow.",
+
+    "Hide-hole": "A cramped, low-ceilinged alcove. It's safe, quiet, and completely hidden from the main hallway.",
+
+    "Swamp Water Shallows": "Brambles give way to murky, knee-deep water. Something slimy skitters across your submerged boot.",
+
+    "Swamp Water Center": "The black water deepens. Thick mist hangs low over the surface, obscuring whatever breathes in the dark.",
+
+    "Secret Room": "A dry, forgotten vault hidden behind the watery expanse. Stone shelves sit empty, waiting to be searched.",
+
+    "Rock Hallway Deep": "The tunnel descends deeper into the earth. The damp stone walls feel like they are closing in.",
+
+    "Animal's Cove": "The air here is thick and smells of wet fur. Claw marks cover the stone walls, and bones litter the dirt.",
+
+    "Hallway's End": "The corridor terminates at a dead end, splitting into narrow side passages. A cold draft blows from the front.",
+
+    "Rock Wall": "A massive, solid rock face blocks any further movement this way. There is nothing here but dead stone.",
+
+    "Fungus Trails": "Massive, glowing mushrooms tower over you like umbrellas, releasing silent puffs of sparkling spores.",
+
+    "Small Passage": "A very tight, claustrophobic crawlspace. You can hear faint chimes and murmurs coming from ahead.",
+
+    "Mildred's Emporium": "A bizarre, cluttered underground shop filled with dusty relics, strange potions, and a very peculiar shopkeeper.",
+
+}
 
 
 
