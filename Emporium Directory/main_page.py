@@ -3,8 +3,8 @@ import sys
 import time
 import os
 # --- IMPORTING YOUR CUSTOM MODULES ---
-from players import Character, Hero
-from emporium_structure import layout, treasure, descriptions
+from players import Character, Hero, Enemy
+from emporium_structure import layout, treasure, descriptions, encounters
 from creation_page import *  # Brings in any pre-made weapons/items
 
 # ==========================================
@@ -15,7 +15,6 @@ def clear_screen():                                                  # clear_scr
     """Clears the terminal screen for a fresh slate."""
     os.system('cls' if os.name == 'nt' else 'clear')
 
-
 def typewriter_whole(text, delay=0.03):                              # typewriter_whole(text, delay=0.03)
     """Prints text one character at a time."""
     for char in text:
@@ -23,25 +22,19 @@ def typewriter_whole(text, delay=0.03):                              # typewrite
         sys.stdout.flush()
         time.sleep(delay)
 
-
 def display_room_ui(room_name):                                      # display_room_ui(room_name)
     """Dynamically draws the room UI frame, paths, and items."""
     # 1. Format the title
     title = f"{room_name.upper()}"
-
-    # 2. Draw Top Borders
     print("\n*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*")
     print("<" + "'" * 52 + ">")
-
-    # 3. Print Title Centered
     print(f"|{title:^52}|")
-    print("|" + " " * 52 + "|")  # Blank spacing line
+    print("|" + " " * 52 + "|")  #e
 
     # new addition starts here
     if room_name in descriptions:
         desc_text = descriptions[room_name]
-
-        # This breaks long sentences into pieces that are maximum 46 characters long
+        # Breaks long sentences into pieces that are maximum 46 characters long
         words = desc_text.split()
         current_line = ""
         for word in words:
@@ -52,22 +45,22 @@ def display_room_ui(room_name):                                      # display_r
                 current_line = word + " "
         if current_line:
             print(f"|  {current_line:<48}  |")
+        print("|" + " " * 52 + "|")
 
-        print("|" + " " * 52 + "|")  # Blank spacing line
     # new addition ends here
-    # 4. Check for Items on the floor!
+    # Check for Items
     if room_name in treasure:
         item_text = f" YOU SEE A: {treasure[room_name].name}"
         print(f"|{item_text:<52}|")
         print("|" + " " * 52 + "|")  # Blank spacing line
 
-    # 5. Print Available Paths
+    # Print Available Paths
     print(f"|{' AVAILABLE PATHS:':<52}|")
     for direction, destination in layout[room_name].items():
         path_string = f"   > {direction}: {destination}"
         print(f"|{path_string:<52}|")
 
-    # 6. Draw Bottom Borders # Possibly remove #
+    # Draw Bottom Borders # Possibly remove #
     print("<" + "," * 52 + ">")
     print("*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
 
@@ -85,20 +78,17 @@ def display_action_ui():                                              # display_
     print("<" + "," * 52 + ">")
     print("*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*")
 
-
 # Global Interceptor
 def typewriter_input(text, delay=0.03):                                # typewriter_input(text, delay=0.03)
     """Types out a question, waits for input, and intercepts global commands."""
     while True:
         typewriter_whole(text, delay)
         action = input().strip().lower()
-
         # INTERCEPT GLOBAL COMMANDS
         if action.endswith(".show_stats()"):
             requested_name = action.split(".")[0]
             player_found = False
-
-            # Notice it now searches your Character class list!
+            # Searches your Character class list!
             for p in Character.all_characters:
                 if p.name.lower() == requested_name:
                     print("\n")
@@ -106,17 +96,74 @@ def typewriter_input(text, delay=0.03):                                # typewri
                     print("\n")
                     player_found = True
                     break
-
             if not player_found:
                 print(f"\nSystem Error: No ID Card found for '{requested_name}'.\n")
             continue
-
         elif action == "quit":
             print("\nCowards...")
             quit()
-
         return action
+### New attack function ###
 
+def start_combat(player, enemy):
+    """Handles a turn-based fight between player and enemy."""
+    clear_screen()
+    typewriter_whole(f"Warning: A {enemy.name} is lurking in the shadows!\n", 0.05)
+    time.sleep(1)
+
+    # --- PRE-COMBAT REACTION ---
+    while True:
+        reaction = typewriter_input("\nDo you [engage] in combat or [sneak] away? \n", 0.02).lower()
+
+        if "sneak" in reaction or "run" in reaction:
+            print("\nYou hold your breath and quietly backpedal into the previous room...")
+            time.sleep(2)
+            return "run"  # Immediately ends the function and triggers your retreat logic!
+
+        elif "engage" in reaction or "attack" in reaction:
+            print(f"\nYou draw your weapon and charge the {enemy.name}!")
+            time.sleep(1)
+            break  # Breaks out of this mini-loop and starts the fight!
+
+        else:
+            print("\nDon't just stand there! Make a choice!")
+
+    # --- THE COMBAT LOOP ---
+    while player.health > 0 and enemy.health > 0:
+        clear_screen()
+        print(f"\n--- COMBAT: {player.name} vs {enemy.name} ---")
+        print(f"{player.name}: {player.health} HP | {enemy.name}: {enemy.health} HP\n")
+
+        # Player Turn
+        action = typewriter_input("Attack or Run? \n", 0.02).lower()
+
+        if "attack" in action:
+            player.attack(enemy)
+            time.sleep(1)
+        elif "run" in action:
+            print("\nYou managed to escape back to the previous room!")
+            time.sleep(1)
+            return "run"
+        else:
+            # If they type something invalid during combat, they lose their turn!
+            print("\nYou hesitate, missing your chance to strike!")
+            time.sleep(1)
+
+        # Enemy Turn (if still alive)
+        if enemy.health > 0:
+            enemy.attack(player)
+            time.sleep(1)
+
+    if player.health <= 0:
+        print("\nYou have been defeated...")
+        time.sleep(2)
+        quit()
+    else:
+        print(f"\nYou defeated the {enemy.name}!")
+        time.sleep(2)
+        return "win"
+
+### End of attack function ###
 
 def create_new_player():                                             # create_new_player()
     """Gathers user input to dynamically create a new Hero instance."""
@@ -136,12 +183,9 @@ def create_new_player():                                             # create_ne
     new_hero.health_max = p_skill
 
     return new_hero
-
-
 # ==========================================
 # --- GAME EXECUTION ---                                                  # ---PHASE 1: GAME EXECUTION --- #
 # ==========================================
-
 
 if __name__ == "__main__":
     clear_screen()
@@ -149,25 +193,17 @@ if __name__ == "__main__":
     box2 = Box(173, 4)
     box2.gen_box()
     box2.display_boxa()
-
     print("\n")
     welcoming_words = ("   --- WELCOME TO CAVE ELSEWHERE ---\n"
                        "This is where you come to die, brave soul. ")
-
     typewriter_whole(welcoming_words, 0.03)
-
     # --- PHASE 1: INTRO SEQUENCE ---
     print("\nTell me...")
     hero1 = create_new_player()
     time.sleep(1)
-
     clear_screen()
     time.sleep(1)
-
-
-
     box2.display_boxa()
-
 
     intro_message = """Aww, a brave little weakling ready to die, HAHAHA! Suit yourself.
 Now, I wont tell you very much but one thing you should know is that
@@ -186,7 +222,6 @@ Here is your ID card. \n"""
     print("\n")
     time.sleep(2)
 
-
     enter_offer = ("Okay, now that you have your cards and you're already at the gates of the unknown,"
                    " I think its about time you got lost inside the darkness. \n")
     typewriter_whole(enter_offer, 0.03)
@@ -194,10 +229,8 @@ Here is your ID card. \n"""
     while True:
         enter = typewriter_input(" Are you ready to see what awaits you..? yes/no \n", 0.03).lower()
         dual_menu()
-
         if enter == "yes":
             clear_screen()
-
             box2.display_boxa()
             typewriter_whole(" You are suddenly alone, no voice addressing you,"
                              " no weight hanging above. Just the empty darkness waiting for you "
@@ -213,7 +246,7 @@ Here is your ID card. \n"""
     # ==========================================
     # --- PHASE 2: CAVE EXPLORATION ---                                    # --- PHASE 2: CAVE EXPLORATION --- #
     # ==========================================
-    #print("---------------------------------")
+    print("---------------------------------")
     current_room = "Cave Entrance"
     print("---------------------------------")
 
@@ -222,33 +255,55 @@ Here is your ID card. \n"""
         # 1. Paint the UI (Room first, then Actions)
         display_room_ui(current_room)
         display_action_ui()
-
         # 2. Get the player's command
         action = typewriter_input("\nWhat would you like to do? \n", 0.02).strip().lower()
-
         # 3. Split the command into separate words (e.g., ["move", "left"])
         words = action.split()
-
         # If they just hit enter without typing anything, ignore it
         if not words:
             clear_screen()
             continue
-
         # The first word they typed is the primary command
         command = words[0]
 
         # --- THE COMMAND PARSER ---                                  #  --- THE COMMAND PARSER --- #
-
-        if command == "move":                                                       # Move
+        ####
+        if command == "move":
             # Check if they actually typed a direction after "move"
             if len(words) > 1:
                 direction = words[1].title()
+
                 if direction in layout[current_room]:
+                    # 1. SAVE THE CURRENT ROOM BEFORE MOVING!
+                    previous_room = current_room
+
+                    # 2. MOVE TO THE NEW ROOM
                     current_room = layout[current_room][direction]
                     clear_screen()
                     box1.display_box()
                     typewriter_whole(f"You cautiously move {direction} into a different room...\n", 0.03)
                     time.sleep(1)
+
+                    # 3. CHECK FOR ENEMIES IN THE NEW ROOM
+                    if current_room in encounters:
+                        enemy_data = encounters[current_room]
+
+                        # Build the enemy
+                        new_enemy = Enemy(name=enemy_data["name"], role=enemy_data["role"])
+                        new_enemy.health = enemy_data["health"]
+
+                        # Start the fight!
+                        outcome = start_combat(hero1, new_enemy)
+
+                        # 4. HANDLE THE OUTCOME
+                        if outcome == "win":
+                            del encounters[current_room]
+                            clear_screen()
+                        elif outcome == "run":
+                            # THIS IS WHERE YOU GET MOVED BACK
+                            current_room = previous_room
+                            clear_screen()
+
                 else:
                     clear_screen()
                     box1.display_box()
@@ -257,6 +312,7 @@ Here is your ID card. \n"""
                 clear_screen()
                 box1.display_box()
                 print("\n*** Move where? (Try 'move left' or 'move straight') ***\n")
+                ####
 
         elif command == "inspect":                                                  # Inspect
             if len(words) > 1:
