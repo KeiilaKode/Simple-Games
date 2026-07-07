@@ -1,0 +1,24 @@
+class Inventory():
+    def __init__(self, name:str, capacity:int):
+        self.name = name
+        self.capacity = capacity
+        self.capacity_max = capacity
+        self.purse = []
+
+    def is_full(self):
+        return len(self.purse) >= self.capacity
+
+    def add_item(self, item):
+        if self.is_full():
+            return False  # Tell the game it failed
+        self.purse.append(item)
+        return True  # Tell the game it worked
+
+class Store(Inventory):
+    def __init__(self, name, capacity):
+        super().__init__(name=name, capacity=capacity)
+
+class Bag(Inventory):
+    def __init__(self, name, capacity, size="Small"):
+        super().__init__(name=name, capacity=capacity)
+        self.size = size
