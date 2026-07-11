@@ -14,14 +14,15 @@ class CalcApp(QWidget):
     def app_settings(self):
         self.setGeometry(480, 150, 300, 500)
         self.setWindowTitle("My Calculator")
+        # background color
         self.setObjectName("CalculatorBackground")
-        self.setStyleSheet("#CalculatorBackground { background-color: #1e1e2e; }")
+        self.setStyleSheet("#CalculatorBackground { background-color: #B0B0B0; }") # #30054d #1e1e2e
 
     def initUI(self):
         # Create app objects
         self.text_box = QLineEdit()
         self.text_box.setFont(QFont("Helvetica", 32))  # QFont also uses .setStyleSheet() Decorative
-        self.text_box.setStyleSheet("QLineEdit {border:2px solid #ccc; border-radius: 10px;"
+        self.text_box.setStyleSheet("QLineEdit {border:3px solid #ff99ff; border-radius: 10px;"
                                     "padding: 10px; background: #444444; color: #54b5fd;}") #333 black
         self.text_box.setReadOnly(True)
 
@@ -35,8 +36,8 @@ class CalcApp(QWidget):
         self.button_clear = QPushButton("Clear")
         self.button_delete = QPushButton("Delete")
 
-        self.button_clear.setStyleSheet("QPushButton {font: 25pt Helvetica; border: 3px solid #ccc; border-radius: 15px; padding:10px; }")
-        self.button_delete.setStyleSheet("QPushButton {font: 25pt Helvetica; border: 3px solid #ccc; border-radius: 15px; padding:10px; }")
+        self.button_clear.setStyleSheet(self.get_button_style())
+        self.button_delete.setStyleSheet(self.get_button_style())
         # Add the buttons to the Grid, starting at 0, inserts the grid above the row layout made above
         row = 0
         col = 0
@@ -68,17 +69,23 @@ class CalcApp(QWidget):
 
 
     # this is pink in hexadecimal #fd00d6: and #ff99ff
-    # dark grey #444444: light grey #777777 teal #ff99ff
+    # dark grey #444444: light grey #777777 teal #ff99ff #ff99ff #444444 #333
     def get_button_style(self):
         return """
     QPushButton {
-        font: 18pt Helvetica;
-        border: 3px solid #444444;
+        font: 23pt Helvetica;
+        border: 3px solid #ff99ff;
         border-radius: 15px;
-        background-color: #ffffff;
-        color: #333;
+        background-color: #444444;
+        color: #54b5fd;
         padding: 15px;
         
+    }
+    QPushButton:hover{
+    background-color: #eee
+    }
+    QPushButton:pressed {
+    background-color: #330160
     }
     
     """
