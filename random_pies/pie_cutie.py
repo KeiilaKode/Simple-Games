@@ -59,29 +59,10 @@ def random_word3():
     word = choice(my_words)
     text3.setText(word)
 
-# Event: Clicked , Connects buttons being clicked to calling the functions
+# Event: Clicked , Connects buttons being clicked to calling the functions #
 button1.clicked.connect(random_word1)
 button2.clicked.connect(random_word3)
 button3.clicked.connect(random_word2)
-
-
-
-
-
-# Event of being clicked, connects to function
-
-# Changes word output
-
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
