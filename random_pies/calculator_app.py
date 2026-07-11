@@ -3,15 +3,18 @@ from PyQt6.QtGui import QInputEvent
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QVBoxLayout, QHBoxLayout, QGridLayout
 from PyQt6.QtGui import QFont
 
+
+
+
 # Settings
 app = QApplication([])
 window = QWidget()
 window.setGeometry(480, 150, 300, 500)
-window.setWindowTitle("Calculator")
+window.setWindowTitle("My Calculator")
 
 # Create app objects
 text_box = QLineEdit()
-text_box.setFont(QFont("Helvetica", 32))
+text_box.setFont(QFont("Helvetica", 32)) #QFont also uses .setStyleSheet() Decorative
 
 # Creates the grid
 grid = QGridLayout()
@@ -21,16 +24,18 @@ buttons = ["7", "8", "9", "/",
                "0", ".", "=", "+"]
 # Buttons
 button_clear = QPushButton("Clear")
-button_delete = QPushButton("<")
+button_delete = QPushButton("Delete")
+
+# Style buttons
+button_clear.setStyleSheet("QPushButton {font: 25pt Comic Sans MS; padding:10px; }")
+button_delete.setStyleSheet("QPushButton {font: 25pt Comic Sans MS; padding:10px; }")
 
 # Design the App, main column container
 master_layout = QVBoxLayout()
-
-# TOP
 master_layout.addWidget(text_box)
-
-# GRID
 master_layout.addLayout(grid)
+# Sets the padding around all widgets and outer edge
+master_layout.setContentsMargins(20, 20, 20, 20)
 
 row = QHBoxLayout()
 row.addWidget(button_clear) # , alignment=Qt.AlignmentFlag.AlignLeft
@@ -46,16 +51,54 @@ window.setLayout(master_layout)
 row = 0
 col = 0
 
+# Methods in PyQt to use for logic: .text(), .clear(), eval(), .sender()
+
+# Add functionality
+def button_click():
+    button = app.sender()
+    text = button.text() # gets the text string from button
+
+    if text == "=":
+        # 2 + 2
+        symbol = text_box.text()
+        try:
+            res = eval(symbol)
+            text_box.setText(str(res))
+        except Exception as e:
+            print("Error", e)
+
+    elif text == "Clear":
+        text_box.clear()
+
+    elif text == "Delete":
+        current_value = text_box.text() # 3 + 9....remove the 9
+        text_box.setText(current_value[:-1])
+
+    else:
+        current_value = text_box.text()
+        text_box.setText(current_value + text)
+
 # Create button for each element in button list
 for text in buttons:
     # Creates a button every loop, applies text from list to it
     button = QPushButton(text)
+    button.clicked.connect(button_click)
+    # Styles the rest of the button's font
+    button.setStyleSheet("QPushButton {font: 25pt Comic Sans MS; padding:10px; }")
     # Create an event here
     grid.addWidget(button, row, col)
     col += 1
     if col > 3:
         col = 0
         row +=1
+
+button_clear.clicked.connect(button_click)
+button_delete.clicked.connect(button_click)
+
+# Styles the rest of the button's font
+
+
+
 
 
 if __name__ == "__main__":
