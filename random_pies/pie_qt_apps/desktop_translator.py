@@ -3,9 +3,9 @@ from PyQt6.QtGui import QInputEvent
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, \
     QTextEdit, QComboBox
 from PyQt6.QtGui import QFont
-from textual.css.types import AlignHorizontal, AlignVertical
 
-from random_pies.emporium_map_app import master_layout
+
+
 
 
 class Translator(QWidget):
