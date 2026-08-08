@@ -59,8 +59,8 @@ def main():
     # ==========================================
     try:
         # Load Wall Background
-        bg_img = pygame.image.load("cross_bg.png").convert()
-        bg_flip_img = pygame.image.load("cross_bg_flip.png").convert()
+        bg_img = pygame.image.load("backgrounds/cross_bg.png").convert()
+        bg_flip_img = pygame.image.load("backgrounds/cross_bg_flip.png").convert()
 
         bg_scale_ratio = SCREEN_HEIGHT / bg_img.get_height()
         bg_w = int(bg_img.get_width() * bg_scale_ratio)
@@ -69,7 +69,7 @@ def main():
         bg_flip_img = pygame.transform.smoothscale(bg_flip_img, (bg_w, SCREEN_HEIGHT))
 
         # Load Floor
-        floor_img = pygame.image.load("floor2.PNG").convert()
+        floor_img = pygame.image.load("mats/floor2.PNG").convert()
         # Make the solid black area at the top of the floor image transparent
         floor_img.set_colorkey((0, 0, 0))
 
@@ -90,12 +90,12 @@ def main():
     # LOAD ANIMATIONS
     # ==========================================
     animations = {
-        "idle": get_sprites_from_sheet("S_IDLE_NB.png"),
-        "walk": get_sprites_from_sheet("S_WALK_NB.png"),
-        "run": get_sprites_from_sheet("S_RUN_NB.png"),
-        "jump": get_sprites_from_sheet("S_JUMP_NB.png"),
-        "run_jump": get_sprites_from_sheet("S_RUN_JUMP_NB.png"),
-        "duck": get_sprites_from_sheet("S_DUCK_NB.png")
+        "idle": get_sprites_from_sheet("spritsheets/S_IDLE_NB.png"),
+        "walk": get_sprites_from_sheet("spritsheets/S_WALK_NB.png"),
+        "run": get_sprites_from_sheet("spritsheets/S_RUN_NB.png"),
+        "jump": get_sprites_from_sheet("spritsheets/S_JUMP_NB.png"),
+        "run_jump": get_sprites_from_sheet("spritsheets/S_RUN_JUMP_NB.png"),
+        "duck": get_sprites_from_sheet("spritsheets/S_DUCK_NB.png")
     }
 
     animation_speeds = {

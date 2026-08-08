@@ -2,9 +2,11 @@ import pygame
 import sys
 import random
 import os
-from pygame import mixer
+from pygame import mixer, Color
 
-# Initialize mixer and pygame
+# ==========================================
+# INITIALIZATION (OOP NOTE: This would go in a Game class __init__)
+# ==========================================
 mixer.init()
 pygame.init()
 
@@ -18,66 +20,147 @@ pygame.display.set_caption("Succi Slipped")
 clock = pygame.time.Clock()
 FPS = 60
 
-# Load Music and Sounds
+# ==========================================
+# ASSET LOADING: AUDIO
+# ==========================================
 try:
-    pygame.mixer.music.load("Satie_Gnossienne_1.mp3")
+    pygame.mixer.music.load("mats/Satie_Gnossienne_1.mp3")  #
     pygame.mixer.music.set_volume(0.2)
     pygame.mixer.music.play(-1, 0.0)
-    jump_fx = pygame.mixer.Sound("Swoosh.mp3")
+    jump_fx = pygame.mixer.Sound("mats/Swoosh.mp3")  #
     jump_fx.set_volume(0.3)
-    death_fx = pygame.mixer.Sound("Pause.mp3")
+    death_fx = pygame.mixer.Sound("mats/Pause.mp3")  #
     death_fx.set_volume(0.6)
 except pygame.error:
-    pass
+    pass  # Fails silently if audio files are missing
 
-# Game Variables
+# ==========================================
+# GAME VARIABLES
+# ==========================================
 gravity = 1500.0
 max_platforms = 40
 game_over = False
 score = 0
 
-# High score loading
+# High score loading (Reads from local file or creates it)
 if os.path.exists("score.txt"):
     with open("score.txt", "r") as file:
         high_score = int(file.read())
 else:
     high_score = 0
 
-# Define colors & fonts
+# Define colors & fonts for the UI
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 PINK = (253, 117, 234)
+CYAN = (0, 255, 255)
+MAGENTA = (255, 0, 255)
+MAROON = (128, 0, 0)
+PURPLE = (128, 0, 128)
+NAVY = (0, 0, 128)
+GRAY = (128, 128, 128)
+LIGHT_GRAY = (200, 200, 200)
+DARK_GRAY = (50, 50, 50)
 font_small = pygame.font.SysFont("Lucida Sans", 20)
-font_big = pygame.font.SysFont("Lucida Sans", 24)
+font_big = pygame.font.SysFont("Lucida Sans", 48)
 
-# Load Images with Correct Extensions
+
+# ==========================================
+# ASSET LOADING: IMAGES & BACKGROUNDS
+# ==========================================
+def trim_black_side_borders(surface, threshold=15):
+    """Scans the left and right edges of an image and trims off solid black borders."""
+    w, h = surface.get_size()
+    left = 0
+    right = w
+
+    # Scan from left edge inward to find where real image content starts
+    for x in range(w // 4):
+        has_content = False
+        for y in range(0, h, 10):
+            color = surface.get_at((x, y))
+            if color.r > threshold or color.g > threshold or color.b > threshold:
+                has_content = True
+                break
+        if has_content:
+            left = x
+            break
+
+    # Scan from right edge inward
+    for x in range(w - 1, w - 1 - (w // 4), -1):
+        has_content = False
+        for y in range(0, h, 10):
+            color = surface.get_at((x, y))
+            if color.r > threshold or color.g > threshold or color.b > threshold:
+                has_content = True
+                break
+        if has_content:
+            right = x + 1
+            break
+
+    if right > left:
+        return surface.subsurface((left, 0, right - left, h)).copy()
+    return surface
+
+
+# ==========================================
+# ASSET LOADING: IMAGES & BACKGROUNDS
+# ==========================================
 try:
-    bg_img = pygame.image.load("cross_bg.png").convert()
-    bg_flip_img = pygame.image.load("cross_bg_flip.png").convert()
-    floor_img = pygame.image.load("floor2.PNG").convert()
-    platform_image = pygame.image.load("plat31c.png").convert_alpha()
-    bird_sheet_img = pygame.image.load("demon_sprite_sheet_3.png").convert_alpha()
+    bg_filenames = [
+        "backgrounds/cross_bg.png",
+        "backgrounds/cross_bg_flip.png",
+        "backgrounds/cross_bg_3.png",
+        "backgrounds/cross_bg_door_flip.PNG",
+        "backgrounds/cross_bg_3_flip.PNG",
+        "backgrounds/cross_bg_2.png",
+        "backgrounds/cross_bg_4.png",
+        "backgrounds/cross_bg_4_flip.PNG"
+    ]
+
+    # Trim and load the first image to calculate master target width
+    first_raw = pygame.image.load(bg_filenames[0]).convert()
+    first_trimmed = trim_black_side_borders(first_raw)
+    bg_scale_ratio = SCREEN_HEIGHT / first_trimmed.get_height()
+    bg_w = int(first_trimmed.get_width() * bg_scale_ratio) - 1
+
+    bg_list = []
+    for filename in bg_filenames:
+        raw_img = pygame.image.load(filename).convert()
+        # Automatically crop off any black side pillars baked into the image
+        trimmed_img = trim_black_side_borders(raw_img)
+        # Scale to standard game dimensions
+        scaled_img = pygame.transform.smoothscale(trimmed_img, (bg_w, SCREEN_HEIGHT))
+        bg_list.append(scaled_img)
+
+    # Load Floor
+    floor_img = pygame.image.load("mats/floor2.PNG").convert()
+    floor_img.set_colorkey((0, 0, 0))
+    target_floor_h = 200
+    floor_scale_ratio = target_floor_h / floor_img.get_height()
+    floor_w = int(floor_img.get_width() * floor_scale_ratio) - 1
+    floor_img = pygame.transform.smoothscale(floor_img, (floor_w, target_floor_h))
+    floor_flip_img = pygame.transform.flip(floor_img, True, False)
+
+    # Load Platforms and Enemy Sprite Sheet and death screen BG
+    platform_image = pygame.image.load("mats/plat31c.png").convert_alpha()
+    bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
+    end_image = pygame.image.load("backgrounds/death_screen.png").convert_alpha()
+    end_image = pygame.transform.smoothscale(end_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
 except pygame.error as e:
     print(f"Error loading image assets: {e}")
     pygame.quit()
     sys.exit()
 
-# Scale Backgrounds and Floor
-bg_scale_ratio = SCREEN_HEIGHT / bg_img.get_height()
-bg_w = int(bg_img.get_width() * bg_scale_ratio)
-bg_img = pygame.transform.smoothscale(bg_img, (bg_w, SCREEN_HEIGHT))
-bg_flip_img = pygame.transform.smoothscale(bg_flip_img, (bg_w, SCREEN_HEIGHT))
 
-floor_img.set_colorkey((0, 0, 0))
-target_floor_h = 200
-floor_scale_ratio = target_floor_h / floor_img.get_height()
-floor_w = int(floor_img.get_width() * floor_scale_ratio)
-floor_img = pygame.transform.smoothscale(floor_img, (floor_w, target_floor_h))
-floor_flip_img = pygame.transform.flip(floor_img, True, False)
+# ==========================================
+# CLASSES (OOP Components)
+# ==========================================
 
-
-# SpriteSheet Class
 class SpriteSheet:
+    """Utility class to extract individual frames from a large sprite sheet image."""
+
     def __init__(self, image):
         self.sheet = image
 
@@ -92,19 +175,21 @@ class SpriteSheet:
 bird_sheet = SpriteSheet(bird_sheet_img)
 
 
-# Enemy (Bat) Class supporting multi-directional spawns and pixel masks
 class Enemy(pygame.sprite.Sprite):
+    """Handles the flying bat enemies. Contains its own update logic."""
+
     def __init__(self, x_pos, y, sprite_sheet, scale, forced_direction=None):
         super().__init__()
         self.animation_list = []
         self.frame_index = 0
         self.update_time = pygame.time.get_ticks()
 
-        # Allow forced direction from left or right, or choose randomly
+        # Allow forced direction from left (1) or right (-1), or choose randomly
         self.direction = forced_direction if forced_direction is not None else random.choice([-1, 1])
+        # If flying right (1), flip the image so it faces right.
         self.flip = (self.direction == 1)
 
-        animation_steps = 3
+        animation_steps = 8
         frame_width = bird_sheet_img.get_width() // animation_steps
         frame_height = bird_sheet_img.get_height()
 
@@ -121,27 +206,31 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.y = y
 
     def update(self, camera_x):
+        # OOP NOTE: This handles the bat's internal state (animation & movement) every frame
         animation_cooldown = 125
         self.image = self.animation_list[self.frame_index]
 
-        # Update mask as frames animate
+        # Update pixel-perfect mask as frames animate
         self.mask = pygame.mask.from_surface(self.image)
 
+        # Frame timer logic
         if pygame.time.get_ticks() - self.update_time > animation_cooldown:
             self.update_time = pygame.time.get_ticks()
             self.frame_index += 1
         if self.frame_index >= len(self.animation_list):
             self.frame_index = 0
 
+        # Move Enemy horizontally across world
         self.rect.x += self.direction * 4
 
-        # Remove if off screen relative to camera view
+        # Memory Cleanup: Remove if it flies too far off screen relative to camera view
         if self.rect.right < camera_x - 400 or self.rect.left > camera_x + SCREEN_WIDTH + 400:
             self.kill()
 
 
-# Platform Class
 class Platform(pygame.sprite.Sprite):
+    """Handles the static skull platforms in the world."""
+
     def __init__(self, x, y, width):
         super().__init__()
         self.image = pygame.transform.scale(platform_image, (width, 25))
@@ -150,9 +239,12 @@ class Platform(pygame.sprite.Sprite):
         self.rect.y = y
 
     def update(self, scroll):
-        pass
+        pass  # Currently static, but you could add moving logic here later
 
 
+# ==========================================
+# UI HELPER FUNCTIONS (OOP NOTE: Could go into a UIManager class)
+# ==========================================
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
@@ -160,11 +252,16 @@ def draw_text(text, font, text_col, x, y):
 
 def draw_panel():
     pygame.draw.rect(screen, BLACK, (0, 0, SCREEN_WIDTH, 30))
-    pygame.draw.line(screen, PINK, (0, 30), (SCREEN_WIDTH, 30), 2)
+    pygame.draw.line(screen, PINK, (0, 30), (SCREEN_WIDTH, 30), 3)
     draw_text("SCORE: " + str(score), font_small, WHITE, 10, 5)
+    draw_text("HIGH SCORE: " + str(high_score), font_small, WHITE, SCREEN_WIDTH // 2 - 80, 5)
 
 
+# ==========================================
+# CHARACTER ANIMATION SETUP
+# ==========================================
 def get_sprites_from_sheet(filename, approx_width=810, target_h=1080):
+    """Slices a massive character sprite sheet into individual frames."""
     try:
         sheet = pygame.image.load(filename).convert_alpha()
     except pygame.error as e:
@@ -172,6 +269,8 @@ def get_sprites_from_sheet(filename, approx_width=810, target_h=1080):
         raise SystemExit(e)
 
     sheet_width, sheet_height = sheet.get_size()
+
+    # Prevents vertical drift if the image height is missing a single pixel
     if sheet_height == target_h - 1:
         padded = pygame.Surface((sheet_width, target_h), pygame.SRCALPHA)
         padded.fill((0, 0, 0, 0))
@@ -195,21 +294,25 @@ def get_sprites_from_sheet(filename, approx_width=810, target_h=1080):
     return sprites
 
 
-# Load character animations
+# Load character animations (OOP NOTE: This block would belong in a Player class __init__)
 animations = {
-    "idle": get_sprites_from_sheet("S_IDLE_NB.png"),
-    "walk": get_sprites_from_sheet("S_WALK_NB.png"),
-    "run": get_sprites_from_sheet("S_RUN_NB.png"),
-    "jump": get_sprites_from_sheet("S_JUMP_NB.png"),
-    "run_jump": get_sprites_from_sheet("S_RUN_JUMP_NB.png"),
-    "duck": get_sprites_from_sheet("S_DUCK_NB.png")
+    "idle": get_sprites_from_sheet("spritsheets/S_IDLE_NB.png"),  #
+    "walk": get_sprites_from_sheet("spritsheets/S_WALK_NB.png"),  #
+    "run": get_sprites_from_sheet("spritsheets/S_RUN_NB.png"),  #
+    "jump": get_sprites_from_sheet("spritsheets/S_JUMP_NB.png"),  #
+    "run_jump": get_sprites_from_sheet("spritsheets/S_RUN_JUMP_NB.png"),  #
+    "duck": get_sprites_from_sheet("spritsheets/S_DUCK_NB.png")  #
 }
 
+# Animation configuration data
 animation_speeds = {"idle": 175, "walk": 130, "run": 75, "jump": 80, "run_jump": 50, "duck": 50}
 animation_loops = {"idle": True, "walk": True, "run": True, "jump": False, "run_jump": False, "duck": False}
 animation_scale_corrections = {"idle": 1.0, "walk": 1.08, "run": 1.08, "jump": 1.0, "run_jump": 1.08, "duck": 1.0}
 
-# Game world states & physics variables
+# ==========================================
+# PLAYER PHYSICS & CAMERA STATE
+# ==========================================
+# OOP NOTE: The x, y, vx, vy variables would become self.x, self.y, etc., in a Player class
 x = 400.0
 y_ground = 730.0
 y = y_ground
@@ -221,6 +324,7 @@ jump_impulse = -800.0
 on_ground = True
 facing_right = True
 
+# OOP NOTE: Camera could be its own class managing what part of the world is visible
 camera_x = 0.0
 LEFT_DEAD_ZONE = SCREEN_WIDTH * 0.25
 RIGHT_DEAD_ZONE = SCREEN_WIDTH * 0.75
@@ -230,32 +334,44 @@ current_frame = 0
 animation_timer = 0
 playing = True
 
+# ==========================================
+# WORLD GENERATION SETUP
+# ==========================================
+# Groups to hold all active entities
 platform_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 
+# Create Initial Starting Platforms
 starting_platform = Platform(200, 580, 180)
 platform_group.add(starting_platform)
-platform_group.add(Platform(550, 480, 200))
-platform_group.add(Platform(900, 380, 160))
+platform_group.add(Platform(450, 380, 200))
+platform_group.add(Platform(800, 480, 160))
 
-# Main Game Loop
+# ==========================================
+# MAIN GAME LOOP
+# ==========================================
 run = True
 while run:
     dt_ms = clock.tick(FPS)
     dt = dt_ms / 1000.0
 
+    # 1. EVENT HANDLING (OOP NOTE: Could be Game.handle_events())
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
 
     if not game_over:
+
+        # 2. INPUT GATHERING (OOP NOTE: Could be Player.handle_input())
         keys = pygame.key.get_pressed()
         moving = False
         run_pressed = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
         duck_pressed = keys[pygame.K_DOWN]
 
+        # Check if she is standing back up from a duck
         recovering_duck = (current_anim == "duck" and not duck_pressed and playing)
 
+        # Apply movement intent based on keys
         if recovering_duck or (duck_pressed and on_ground):
             vx = 0
         elif keys[pygame.K_LEFT]:
@@ -269,6 +385,7 @@ while run:
         else:
             vx = 0
 
+        # Apply jump intent
         if keys[pygame.K_SPACE] and on_ground and not duck_pressed and not recovering_duck:
             if moving and "run_jump" in animations:
                 current_anim = "run_jump"
@@ -284,37 +401,44 @@ while run:
             except:
                 pass
 
-        x += vx * dt
+        # 3. PHYSICS & COLLISIONS (OOP NOTE: Could be Player.update_physics())
+        x += vx * dt  # Move horizontally
 
         if not on_ground:
             vy += gravity * dt
-            y += vy * dt
+            y += vy * dt  # Move vertically
 
+            # Check Platform Collisions while falling
             for platform in platform_group:
+                # If falling (vy > 0) AND player rect intersects platform rect
                 if vy > 0 and platform.rect.colliderect(x - 20, y - 5, 40, 10):
+                    # Snap feet to the top of the platform
                     if y - vy * dt <= platform.rect.top + 10:
                         y = platform.rect.top
                         vy = 0
                         on_ground = True
                         break
 
+            # Check Ground Floor Collision
             if y >= y_ground:
                 y = y_ground
                 vy = 0
                 on_ground = True
         else:
+            # If on ground, verify we haven't walked off the edge of a platform
             on_platform = False
             for platform in platform_group:
                 if platform.rect.colliderect(x - 20, y, 40, 5):
                     on_platform = True
                     break
             if not on_platform and y < y_ground:
-                on_ground = False
+                on_ground = False  # Start falling!
 
+        # 4. ANIMATION STATE MACHINE (OOP NOTE: Could be Player.update_animation_state())
         if not on_ground:
-            pass
+            pass  # Keep playing air animation
         elif recovering_duck:
-            pass
+            pass  # Keep playing standing-up animation
         elif duck_pressed:
             if current_anim != "duck":
                 current_anim = "duck"
@@ -341,65 +465,88 @@ while run:
                 animation_timer = 0
                 playing = True
 
+        # 5. CAMERA LOGIC (OOP NOTE: Could be Camera.update(player.x))
         screen_x = x - camera_x
         if screen_x > RIGHT_DEAD_ZONE:
             camera_x += (screen_x - RIGHT_DEAD_ZONE)
         elif screen_x < LEFT_DEAD_ZONE:
             camera_x -= (LEFT_DEAD_ZONE - screen_x)
 
-        # Clear platforms that have scrolled off-screen to the left so generation never stops
+        # 6. WORLD GENERATION & CLEANUP (OOP NOTE: Could be LevelManager.update())
+
+        # Clear platforms that are way behind the camera (Allows generous backtracking)
         for platform in list(platform_group):
             if platform.rect.right < camera_x - 4000:
                 platform.kill()
+
+        # # Continuously generate platforms ahead of the camera
+        # if len(platform_group) < max_platforms:
+        #     last_platform = max(platform_group, key=lambda p: p.rect.x, default=None)
+        #     if last_platform:
+        #         p_x = last_platform.rect.x + random.randint(240, 400)
+        #     else:
+        #         p_x = camera_x + SCREEN_WIDTH + 100
+        #     p_w = random.randint(140, 280)
+        #     p_y = random.randint(350, 610)
+        #     platform_group.add(Platform(p_x, p_y, p_w))
 
         # Continuously generate platforms ahead of the camera
         if len(platform_group) < max_platforms:
             last_platform = max(platform_group, key=lambda p: p.rect.x, default=None)
             if last_platform:
-                p_x = last_platform.rect.x + random.randint(250, 400)
+                # Measure the GAP directly from the right end of the previous platform
+                gap = random.randint(120, 290)
+                p_x = last_platform.rect.right + gap
             else:
                 p_x = camera_x + SCREEN_WIDTH + 100
-            p_w = random.randint(140, 220)
-            p_y = random.randint(320, 620)
+
+            # Narrower platforms (100px - 180px) demand cleaner landing precision
+            p_w = random.randint(90, 200)
+
+            # Vertical height range (320px - 620px)
+            p_y = random.randint(320, 625)
+
             platform_group.add(Platform(p_x, p_y, p_w))
 
-        # Increase max bats on screen to 5 and randomize spawn side (left or right)
-        if len(enemy_group) < 5 and random.randint(1, 60) == 1:
+        # Generate Bats (max 3 on screen)
+        if len(enemy_group) < 3 and random.randint(1, 60) == 1:
             spawn_side = random.choice(["left", "right"])
             enemy_y = random.randint(200, 550)
             if spawn_side == "left":
-                # Spawn off-screen to the left, moving right
                 spawn_x = camera_x - 150
-                enemy = Enemy(spawn_x, enemy_y, bird_sheet, 1.5, forced_direction=1)
+                enemy = Enemy(spawn_x, enemy_y, bird_sheet, .15, forced_direction=1)
             else:
-                # Spawn off-screen to the right, moving left
                 spawn_x = camera_x + SCREEN_WIDTH + 150
-                enemy = Enemy(spawn_x, enemy_y, bird_sheet, 1.5, forced_direction=-1)
+                enemy = Enemy(spawn_x, enemy_y, bird_sheet, .15, forced_direction=-1)
             enemy_group.add(enemy)
 
+        # Tell all bats to update their own internal positions and frames
         enemy_group.update(camera_x)
+
+        # Track distance traveled as score
         score = int(x)
 
+        # 7. ADVANCE FRAME TIMERS
         anim_frames = animations[current_anim]
         delay = animation_speeds.get(current_anim, 120)
         loop = animation_loops.get(current_anim, True)
         animation_timer += dt_ms
 
+        # Custom logic to freeze frames on specific poses (Ducking / Mid-air)
         if current_anim == "duck" and duck_pressed:
             if current_frame >= 6:
                 current_frame = 6
                 animation_timer = 0
-
         if current_anim == "jump" and not on_ground:
             if current_frame >= 5:
                 current_frame = 5
                 animation_timer = 0
-
         if current_anim == "run_jump" and not on_ground:
             if current_frame >= 9:
                 current_frame = 9
                 animation_timer = 0
 
+        # Step frames forward based on time elapsed
         if loop:
             if animation_timer >= delay:
                 steps = animation_timer // delay
@@ -414,14 +561,19 @@ while run:
                     current_frame = len(anim_frames) - 1
                     playing = False
 
-        # --- DRAWING PHASE ---
+        # ==========================================
+        # 8. DRAWING PHASE (OOP NOTE: Could be Game.draw())
+        # ==========================================
+
+        # A. Draw Looping Wall Backgrounds
         start_bg_index = int(camera_x // bg_w)
         num_bgs_to_draw = (SCREEN_WIDTH // bg_w) + 2
         for i in range(start_bg_index, start_bg_index + num_bgs_to_draw):
-            current_bg = bg_img if i % 2 == 0 else bg_flip_img
+            current_bg = bg_list[i % len(bg_list)]
             bg_screen_x = (i * bg_w) - camera_x
             screen.blit(current_bg, (bg_screen_x, 0))
 
+        # B. Draw Floor Backgrounds
         start_floor_index = int(camera_x // floor_w)
         num_floors_to_draw = (SCREEN_WIDTH // floor_w) + 2
         floor_draw_y = SCREEN_HEIGHT - target_floor_h + 30
@@ -430,11 +582,13 @@ while run:
             floor_screen_x = (i * floor_w) - camera_x
             screen.blit(current_floor, (floor_screen_x, floor_draw_y))
 
+        # C. Draw Platforms relative to camera view
         for platform in platform_group:
             plat_screen_x = platform.rect.x - camera_x
             if -200 < plat_screen_x < SCREEN_WIDTH + 200:
                 screen.blit(platform.image, (plat_screen_x, platform.rect.y))
 
+        # D. Draw Player
         frame_surf = anim_frames[current_frame]
         display_w, display_h = frame_surf.get_size()
         base_scale_factor = 0.25
@@ -454,11 +608,12 @@ while run:
         # Create precise pixel mask for the player from the currently drawn surface
         player_mask = pygame.mask.from_surface(frame_to_draw)
 
+        # E. Draw Bats and Check True Pixel-Perfect Collision
         for enemy in enemy_group:
             enemy_screen_x = enemy.rect.x - camera_x
             screen.blit(enemy.image, (enemy_screen_x, enemy.rect.y))
 
-            # True pixel-perfect collision check using masks
+            # If the visible pixels of the bat overlap the visible pixels of the player...
             offset = (blit_x - enemy_screen_x, blit_y - enemy.rect.y)
             if enemy.mask.overlap(player_mask, offset):
                 game_over = True
@@ -467,13 +622,23 @@ while run:
                 except:
                     pass
 
+        # F. Draw UI Overlay
         draw_panel()
 
     else:
-        screen.fill(BLACK)
-        draw_text("YOUR SOUL HAS BEEN LOST!!", font_big, WHITE, SCREEN_WIDTH // 2 - 180, 250)
-        draw_text("SCORE: " + str(score), font_big, WHITE, SCREEN_WIDTH // 2 - 80, 300)
-        draw_text("PRESS SPACE TO TRY AGAIN", font_big, WHITE, SCREEN_WIDTH // 2 - 150, 350)
+        # ==========================================
+        # GAME OVER STATE
+        # ==========================================
+        # Draw the death screen background starting at top-left (0, 0)
+        screen.blit(end_image, (0, 0))
+        # pygame.draw.line(surface, color, start_pos, end_pos, width)
+        pygame.draw.line(screen, Color("plum1"), (350, 245), (500 + 520, 245), 6)
+        draw_text("YOUR SOUL HAS BEEN LOST!!", font_big, Color("blue1"), SCREEN_WIDTH // 2 - 350, 250)
+        pygame.draw.line(screen, Color("plum1"), (350, 315), (500 + 520, 315), 6)
+        draw_text("SCORE: " + str(score), font_big, Color("turquoise1"), SCREEN_WIDTH // 2 - 150, 320)
+        pygame.draw.line(screen, Color("plum1"), (350, 400), (500 + 520, 400), 6)
+        draw_text("PRESS SPACE TO TRY AGAIN", font_big, Color("blue1"), SCREEN_WIDTH // 2 - 330, 400)
+        pygame.draw.line(screen, Color("plum1"), (350, 475), (SCREEN_WIDTH // 2 + 330, 475), 6)
 
         if score > high_score:
             high_score = score
@@ -482,6 +647,7 @@ while run:
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE]:
+            # Reset Game Variables
             game_over = False
             score = 0
             x = 400.0
@@ -490,6 +656,7 @@ while run:
             enemy_group.empty()
             platform_group.empty()
 
+            # Generate fresh starting platforms
             starting_platform = Platform(200, 580, 180)
             platform_group.add(starting_platform)
             platform_group.add(Platform(550, 480, 300))
@@ -497,5 +664,6 @@ while run:
 
     pygame.display.update()
 
+mixer.quit()
 pygame.quit()
 sys.exit()

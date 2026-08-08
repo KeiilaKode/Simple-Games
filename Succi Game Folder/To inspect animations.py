@@ -54,12 +54,12 @@ def main():
 
     # Load animations
     animations = {
-        "idle": get_sprites_from_sheet("S_IDLE_NB.png"),
-        "walk": get_sprites_from_sheet("S_WALK_NB.png"),
-        "run": get_sprites_from_sheet("S_RUN_NB.png"),
-        "jump": get_sprites_from_sheet("S_JUMP_NB.png"),
-        "run_jump": get_sprites_from_sheet("S_RUN_JUMP_NB.png"),
-        "duck": get_sprites_from_sheet("S_DUCK_NB.png")
+        "idle": get_sprites_from_sheet("spritsheets/S_IDLE_NB.png"),
+        "walk": get_sprites_from_sheet("spritsheets/S_WALK_NB.png"),
+        "run": get_sprites_from_sheet("spritsheets/S_RUN_NB.png"),
+        "jump": get_sprites_from_sheet("spritsheets/S_JUMP_NB.png"),
+        "run_jump": get_sprites_from_sheet("spritsheets/S_RUN_JUMP_NB.png"),
+        "duck": get_sprites_from_sheet("spritsheets/S_DUCK_NB.png")
     }
 
     # Per-animation timing (ms per frame)
