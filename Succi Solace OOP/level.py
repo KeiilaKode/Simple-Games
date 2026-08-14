@@ -206,3 +206,40 @@ class Merchant_Room:
         s_floor = int(camera_x // self.floor_w)
         for i in range(s_floor, s_floor + (self.screen_width // self.floor_w) + 2):
             screen.blit(self.floor_img, ((i * self.floor_w) - camera_x, self.screen_height - self.target_floor_h + 30))
+
+
+class Level_02(Level_01):
+    def __init__(self, screen_width, screen_height):
+        # Initialize exactly like Level 1, but we override the asset loading
+        super().__init__(screen_width, screen_height)
+
+    def load_assets(self):
+        # Override Level 1 assets to use the new purple forest background
+        raw_bg = pygame.image.load("backgrounds/lvl_2_bgs/level_2bg.png").convert()
+        trimmed_bg = trim_black_side_borders(raw_bg)
+        bg_scale_ratio = self.screen_height / trimmed_bg.get_height()
+        self.bg_w = int(trimmed_bg.get_width() * bg_scale_ratio) - 1
+
+        scaled_bg = pygame.transform.smoothscale(trimmed_bg, (self.bg_w, self.screen_height))
+
+        # Make Level 2 longer (e.g., 25 backgrounds)
+        self.max_backgrounds = 25
+        self.bg_list = [scaled_bg for _ in range(self.max_backgrounds)]
+
+        # Load floor and enemy assets
+        floor_img = pygame.image.load("mats/floor2.PNG").convert()
+        floor_img.set_colorkey((0, 0, 0))
+        self.target_floor_h = 200
+        floor_scale_ratio = self.target_floor_h / floor_img.get_height()
+        self.floor_w = int(floor_img.get_width() * floor_scale_ratio) - 1
+        self.floor_img = pygame.transform.smoothscale(floor_img, (self.floor_w, self.target_floor_h))
+        self.floor_flip_img = pygame.transform.flip(self.floor_img, True, False)
+
+        self.platform_image = pygame.image.load("mats/plat31c.png").convert_alpha()
+        self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
+
+        self.demon_walk_r, self.demon_walk_l = load_enemy_frames("spritsheets/enemies/D_WALK_SSNB.png", 7, 0.35)
+        self.demon_attack_r, self.demon_attack_l = load_enemy_frames("spritsheets/enemies/D_attack_SSNB.png", 12, 0.35)
+        self.skel_walk_r, self.skel_walk_l = load_enemy_frames("spritsheets/enemies/skelly_walk_NB.png", 8, 0.7)
+        self.skel_idle_r, self.skel_idle_l = load_enemy_frames("spritsheets/enemies/skelly_idle_NB.png", 10, 0.7)
+        self.skel_attack_r, self.skel_attack_l = load_enemy_frames("spritsheets/enemies/skelly_attack_NB.png", 10, 0.7)

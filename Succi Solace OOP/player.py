@@ -19,6 +19,11 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = True
         self.facing_right = True
 
+        # Health System (Starts at 1 hit = death, upgrades to 3 later)
+        self.health = 1
+        self.max_health = 1
+        self.invulnerable_timer = 0
+
         # State Management
         self.current_anim = "idle"
         self.current_frame = 0
@@ -41,7 +46,6 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
     def handle_input(self, keys):
-        """Reads keyboard input and sets movement/action intent."""
         moving = False
         run_pressed = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
         duck_pressed = keys[pygame.K_DOWN]
@@ -97,7 +101,6 @@ class Player(pygame.sprite.Sprite):
         return moving, run_pressed, duck_pressed
 
     def update_physics(self, dt, platform_group):
-        """Applies gravity, velocity, and platform collisions."""
         self.x += self.vx * dt
 
         if not self.on_ground:
@@ -126,7 +129,6 @@ class Player(pygame.sprite.Sprite):
                 self.on_ground = False
 
     def update_animation_state(self, moving, run_pressed, duck_pressed):
-        """Determines which animation should be playing."""
         if self.attacking or not self.on_ground or self.recovering_duck:
             pass
         elif duck_pressed:
@@ -156,13 +158,11 @@ class Player(pygame.sprite.Sprite):
                 self.playing = True
 
     def advance_frame(self, dt_ms, loops_dict):
-        """Pushes the animation frames forward based on delta time."""
         anim_frames = self.animations[self.current_anim]
         delay = self.anim_speeds.get(self.current_anim, 120)
         loop = loops_dict.get(self.current_anim, True)
         self.animation_timer += dt_ms
 
-        # Clamp specific frames
         if self.current_anim == "duck" and getattr(self, 'duck_pressed', False):
             if self.current_frame >= 6:
                 self.current_frame = 6
@@ -190,16 +190,26 @@ class Player(pygame.sprite.Sprite):
                     self.current_frame = len(anim_frames) - 1
                     self.playing = False
 
+    def take_damage(self):
+        """Returns True if the player dies, False if they survive."""
+        if pygame.time.get_ticks() - self.invulnerable_timer < 1000:
+            return False  # Still invincible from last hit
+
+        self.health -= 1
+        self.invulnerable_timer = pygame.time.get_ticks()
+
+        if self.health <= 0:
+            return True
+        return False
+
     def update(self, keys, dt, dt_ms, platform_group, loops_dict):
-        """The master update method called by the main game loop."""
         moving, run_pressed, duck_pressed = self.handle_input(keys)
-        self.duck_pressed = duck_pressed  # Store for frame clamping
+        self.duck_pressed = duck_pressed
         self.update_physics(dt, platform_group)
         self.update_animation_state(moving, run_pressed, duck_pressed)
         self.advance_frame(dt_ms, loops_dict)
 
     def draw(self, screen, camera_x):
-        """Calculates scaling and offsets, then draws the player to the screen."""
         frame_surf = self.animations[self.current_anim][self.current_frame]
         display_w, display_h = frame_surf.get_size()
 
@@ -230,9 +240,13 @@ class Player(pygame.sprite.Sprite):
         blit_x += x_offset
         blit_y = int(self.y - fh) + y_offset
 
-        screen.blit(frame_to_draw, (blit_x, blit_y))
-
-        # Update the mask using the properly scaled and flipped frame for perfect collision
         self.mask = pygame.mask.from_surface(frame_to_draw)
         self.rect = frame_to_draw.get_rect(topleft=(blit_x, blit_y))
+
+        # Flicker effect if invulnerable
+        if pygame.time.get_ticks() - self.invulnerable_timer < 1000:
+            if (pygame.time.get_ticks() // 100) % 2 == 0:
+                return blit_x, blit_y  # Skip rendering to blink
+
+        screen.blit(frame_to_draw, (blit_x, blit_y))
         return blit_x, blit_y

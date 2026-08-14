@@ -5,8 +5,8 @@ from pygame import mixer, Color
 
 # OOP Imports
 from player import Player
-from entities import Projectile, Merchant
-from level import Level_01, Merchant_Room
+from entities import Projectile, Merchant, Merchant_UI
+from level import Level_01, Level_02, Merchant_Room
 
 if getattr(sys, 'frozen', False):
     os.chdir(sys._MEIPASS)
@@ -45,9 +45,15 @@ try:
     explode_fx = pygame.mixer.Sound("mats/explode.mp3")
     explode_fx.set_volume(0.2)
 
-    # Merchant Voice Line
     merchant_voice_fx = pygame.mixer.Sound("mats/merchant entrance.mp3")
     merchant_voice_fx.set_volume(0.6)
+
+    laugh_fx = pygame.mixer.Sound("mats/laugh_bb.mp3")
+    laugh_fx.set_volume(0.6)
+
+    # Merchant Departure Voice Line
+    departure_fx = pygame.mixer.Sound("mats/merchant_departure.mp3")
+    departure_fx.set_volume(0.6)
 except pygame.error as e:
     print(f"Audio Load Warning: {e}")
 
@@ -112,17 +118,30 @@ def draw_panel(score, rem):
     draw_text(f"HIGH SCORE: {high_score}", font_small, WHITE, SCREEN_WIDTH // 2 - 80, 5)
 
 
+def draw_health_bar(health, max_health):
+    if max_health > 1:
+        pygame.draw.rect(screen, LIGHT_GRAY, (10, 35, 150, 20), 2)
+        if health > 0:
+            segment_w = 146 // max_health
+            for i in range(health):
+                pygame.draw.rect(screen, (50, 255, 50), (12 + i * segment_w, 37, segment_w - 2, 16))
+
+
 # ==========================================
 # GAME STATE SETUP
 # ==========================================
 current_state = "LEVEL_1"
+checkpoint = 1  # 1 = Level 1, 2 = Level 2 unlocked checkpoint
 game_over, paused = False, False
 camera_x = 0.0
-rem = 0  # Currency Tracker
+rem = 0
 
 current_level = Level_01(SCREEN_WIDTH, SCREEN_HEIGHT)
 merchant_room = Merchant_Room(SCREEN_WIDTH, SCREEN_HEIGHT)
-merchant_npc = None  # Loaded on demand when entering the room
+merchant_npc = None
+merchant_ui = None
+exiting_merchant = False
+exit_timer = 0
 
 succi = Player(400.0, current_level.y_ground, animations, animation_speeds, animation_scale_corrections, jump_fx,
                cast_fx)
@@ -137,22 +156,25 @@ while run:
     dt = dt_ms / 1000.0
     keys = pygame.key.get_pressed()
 
+    mouse_click = False
+    mouse_pos = pygame.mouse.get_pos()
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT: run = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
                 if not game_over: paused = not paused
-            # DEBUG SHORTCUT: Press 'M' to instantly teleport to the merchant door screen
             elif event.key == pygame.K_m and current_state == "LEVEL_1":
-                succi.x = current_level.level_end_x - 300
+                succi.x = current_level.door_world_x
                 camera_x = current_level.level_end_x - SCREEN_WIDTH
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_click = True
 
     if not game_over and not paused:
 
-        if current_state == "LEVEL_1":
+        if current_state == "LEVEL_1" or current_state == "LEVEL_2":
             succi.update(keys, dt, dt_ms, current_level.platform_group, animation_loops)
 
-            # Prevent Succi from walking past the end of the level
             if succi.x > current_level.level_end_x - 100:
                 succi.x = current_level.level_end_x - 100
 
@@ -175,7 +197,6 @@ while run:
             elif screen_x < SCREEN_WIDTH * 0.25:
                 camera_x -= (SCREEN_WIDTH * 0.25 - screen_x)
 
-            # Stop Camera at the end of the level
             if camera_x > current_level.level_end_x - SCREEN_WIDTH:
                 camera_x = current_level.level_end_x - SCREEN_WIDTH
             if camera_x < 0: camera_x = 0
@@ -191,7 +212,7 @@ while run:
                             ty = target.rect.top if hasattr(target, 'state') else target.rect.y
                             if proj.mask.overlap(target.mask, (target.rect.x - proj.rect.x, ty - proj.rect.y)):
                                 proj.explode()
-                                rem += target.rem_value  # Collect REM
+                                rem += target.rem_value
                                 target.kill()
                                 try:
                                     explode_fx.play()
@@ -203,17 +224,56 @@ while run:
             score = int(succi.x)
 
         elif current_state == "MERCHANT":
-            # Update the merchant's cutscene/animation frames and sync audio
             if merchant_npc:
                 merchant_npc.update(dt_ms, merchant_voice_fx)
+
+                if merchant_npc.state == "idle" and merchant_ui is not None:
+                    # If not currently playing departure sound, process shop clicks
+                    if not exiting_merchant:
+                        bought_item = merchant_ui.update(mouse_pos, mouse_click, rem)
+
+                        if bought_item == "Health Potion":
+                            rem -= 50
+                            merchant_ui.sold_out["Health Potion"] = True
+                            merchant_ui.selected_item = None
+                            try:
+                                laugh_fx.play()
+                            except NameError:
+                                pass
+
+                            succi.max_health = 3
+                            succi.health = 3
+
+                        # Press E to trigger departure audio and exit sequence
+                        if keys[pygame.K_e]:
+                            exiting_merchant = True
+                            exit_timer = pygame.time.get_ticks()
+                            checkpoint = 2  # SAVE CHECKPOINT FOR LEVEL 2
+                            try:
+                                departure_fx.play()
+                            except NameError:
+                                pass
+
+                    # Wait for departure sound to finish before loading Level 2
+                    if exiting_merchant:
+                        if pygame.time.get_ticks() - exit_timer > 8000:  # ~8 seconds delay for voice line
+                            current_state = "LEVEL_2"
+                            current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
+                            succi.x = 400.0
+                            camera_x = 0.0
+                            exiting_merchant = False
+
+                            # Load and play Level 2 Music Track ONCE upon entry
+                            pygame.mixer.music.load("mats/Toccata and Fugue in Dm, BWV 565.mp3")
+                            pygame.mixer.music.set_volume(0.2)
+                            pygame.mixer.music.play(-1, 0.0)
 
     # ==========================================
     # DRAWING PHASE
     # ==========================================
     if not game_over:
-        if current_state == "LEVEL_1":
+        if current_state == "LEVEL_1" or current_state == "LEVEL_2":
             current_level.draw(screen, camera_x)
-
             succi_blit_x, succi_blit_y = succi.draw(screen, camera_x)
 
             for proj in projectile_group:
@@ -225,35 +285,41 @@ while run:
                     tx = target.rect.x - camera_x
                     if -200 < tx < SCREEN_WIDTH + 200:
                         ty = target.rect.top if hasattr(target, 'state') else target.rect.y
+
                         if target.mask.overlap(succi.mask, (succi_blit_x - tx, succi_blit_y - ty)):
-                            game_over = True
-                            try:
-                                death_fx.play()
-                            except NameError:
-                                pass
+                            if succi.take_damage():
+                                game_over = True
+                                try:
+                                    death_fx.play()
+                                except NameError:
+                                    pass
 
-            # DOOR INTERACTION LOGIC (Triggers anywhere on the final background screen)
-            current_bg_index = int(succi.x // current_level.bg_w)
-            if current_bg_index >= current_level.max_backgrounds - 1:
-                if keys[pygame.K_e]:
-                    current_state = "MERCHANT"
-                    pygame.mixer.music.stop()  # Stop level background music
+            if current_state == "LEVEL_1":
+                current_bg_index = int(succi.x // current_level.bg_w)
+                if current_bg_index >= current_level.max_backgrounds - 1:
+                    if keys[pygame.K_e]:
+                        current_state = "MERCHANT"
+                        pygame.mixer.music.stop()
 
-                    if merchant_npc is None:
-                        merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT, "spritsheets/merchant_SS.png",
-                                                columns=7, rows=4)
+                        if merchant_npc is None:
+                            merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT, "spritsheets/merchant_SS.png",
+                                                    columns=7, rows=4)
+                            merchant_ui = Merchant_UI(SCREEN_WIDTH, SCREEN_HEIGHT)
 
-                    succi.x = 400.0  # Reset position safely inside merchant room
+                        succi.x = 400.0
 
         elif current_state == "MERCHANT":
-            # Draw the merchant room background
-            merchant_room.draw(screen, 0)
-
-            # Draw the cutscene animation frames playing
-            if merchant_npc:
+            if merchant_npc and merchant_npc.state == "intro":
                 merchant_npc.draw(screen)
+            elif merchant_npc and merchant_npc.state == "idle" and merchant_ui:
+                merchant_ui.draw(screen, mouse_pos, rem)
+                if not exiting_merchant:
+                    draw_text("Press 'E' to Leave", font_big, Color("turquoise1"), 1000, 25)
+                else:
+                    draw_text("Good Luck...", font_big, Color("turquoise1"), 1000, 25)
 
         draw_panel(score, rem)
+        draw_health_bar(succi.health, succi.max_health)
 
         if paused:
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -268,34 +334,67 @@ while run:
             draw_text("Shift      : Run", font_small, Color("blue1"), ctrl_x, 105)
             draw_text("Space      : Jump", font_small, Color("blue1"), ctrl_x, 130)
             draw_text("F Key      : Cast Fireball", font_small, Color("blue1"), ctrl_x, 155)
-            draw_text("E Key      : To Enter", font_small, Color("blue1"), ctrl_x, 180)
-            draw_text("P / ESC    : Pause", font_small, PINK, ctrl_x, 205)
-
+            draw_text("E Key      : Enter/Exit", font_small, Color("blue1"), ctrl_x, 155)
+            draw_text("P / ESC    : Pause", font_small, PINK, ctrl_x, 180)
 
     else:
         screen.blit(end_image, (0, 0))
-        pygame.draw.line(screen, Color("plum1"), (350, 245), (870, 245), 6)
+        pygame.draw.line(screen, Color("plum1"), (350, 245), ((SCREEN_WIDTH // 2 + 330, 245)), 6)
         draw_text("YOUR SOUL HAS BEEN LOST!!", font_big, Color("blue1"), SCREEN_WIDTH // 2 - 350, 250)
-        pygame.draw.line(screen, Color("plum1"), (350, 315), (870, 315), 6)
+        pygame.draw.line(screen, Color("plum1"), (350, 315), ((SCREEN_WIDTH // 2 + 330, 315)), 6)
         draw_text(f"SCORE: {score}", font_big, Color("turquoise1"), SCREEN_WIDTH // 2 - 150, 320)
-        pygame.draw.line(screen, Color("plum1"), (350, 400), (870, 400), 6)
-        draw_text("PRESS SPACE TO TRY AGAIN", font_big, Color("blue1"), SCREEN_WIDTH // 2 - 330, 400)
+        pygame.draw.line(screen, Color("plum1"), (350, 400), ((SCREEN_WIDTH // 2 + 330, 400)), 6)
+
+        # CHOICE ON DEATH: Press SPACE for Checkpoint (Level 2), Press '1' to drop back to Level 1
+        if checkpoint == 2:
+            draw_text("PRESS SPACE TO RETRY LEVEL 2", font_small, Color("blue1"), SCREEN_WIDTH // 2 - 160, 410)
+            draw_text("PRESS '1' TO RESTART AT LEVEL 1", font_small, Color("turquoise1"), SCREEN_WIDTH // 2 - 165, 435)
+        else:
+            draw_text("PRESS SPACE TO TRY AGAIN", font_big, Color("blue1"), SCREEN_WIDTH // 2 - 330, 400)
+
         pygame.draw.line(screen, Color("plum1"), (350, 475), (SCREEN_WIDTH // 2 + 330, 475), 6)
 
         if score > high_score:
             high_score = score
             with open("score.txt", "w") as file: file.write(str(high_score))
 
+        # Handle Death Restart Input Choices
+        restart_action = None
         if pygame.key.get_pressed()[pygame.K_SPACE]:
+            restart_action = checkpoint
+        elif checkpoint == 2 and pygame.key.get_pressed()[pygame.K_1]:
+            restart_action = 1
+            checkpoint = 1  # Reset checkpoint back to Level 1
+
+        if restart_action is not None:
             game_over, paused, camera_x, rem = False, False, 0.0, 0
-            current_state = "LEVEL_1"
-            current_level.reset()  # <--- Fast reset using already-loaded assets!
+
+            old_max_health = succi.max_health if hasattr(succi, 'max_health') else 1
+
+            if restart_action == 2:
+                current_state = "LEVEL_2"
+                current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
+                # <--- REMOVED music load/play here so it keeps playing continuously!
+            else:
+                current_state = "LEVEL_1"
+                current_level = Level_01(SCREEN_WIDTH, SCREEN_HEIGHT)
+                old_max_health = 1  # Reset health if dropping back to level 1
+                # If they dropped back to Level 1 from Level 2, reload the Level 1 track:
+                pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")
+                pygame.mixer.music.set_volume(0.2)
+                pygame.mixer.music.play(-1, 0.0)
+
+            current_level.reset()
             merchant_npc = None
+            merchant_ui = None
+
             succi = Player(400.0, current_level.y_ground, animations, animation_speeds, animation_scale_corrections,
                            jump_fx, cast_fx)
+            succi.max_health = old_max_health
+            succi.health = old_max_health
             projectile_group.empty()
 
-            # Restart background music if it was stopped in the merchant room
+            # Fallback safety check for music continuity
             if not pygame.mixer.music.get_busy():
                 pygame.mixer.music.play(-1, 0.0)
 
