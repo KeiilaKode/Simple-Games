@@ -165,7 +165,8 @@ while run:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
                 if not game_over: paused = not paused
-            elif event.key == pygame.K_m and current_state == "LEVEL_1":
+            # M Key warped to work in BOTH Level 1 and Level 2
+            elif event.key == pygame.K_m and (current_state == "LEVEL_1" or current_state == "LEVEL_2"):
                 succi.x = current_level.door_world_x
                 camera_x = current_level.level_end_x - SCREEN_WIDTH
             elif event.key == pygame.K_n:
@@ -296,12 +297,20 @@ while run:
                 if -200 < (px := proj.rect.x - camera_x) < SCREEN_WIDTH + 200: screen.blit(proj.image,
                                                                                            (px, proj.rect.y))
 
-            for group in [current_level.enemy_group, current_level.demon_group, current_level.skeleton_group]:
+            # Dynamically select which enemies to check for collisions based on level
+            enemy_groups_to_check = [current_level.enemy_group]
+            if current_state == "LEVEL_1":
+                enemy_groups_to_check.extend([current_level.demon_group, current_level.skeleton_group])
+            elif current_state == "LEVEL_2":
+                enemy_groups_to_check.extend(
+                    [current_level.helldog_group, current_level.mau_group, current_level.pkgrim_group])
+
+            # Process Player taking damage
+            for group in enemy_groups_to_check:
                 for target in group:
                     tx = target.rect.x - camera_x
                     if -200 < tx < SCREEN_WIDTH + 200:
                         ty = target.rect.top if hasattr(target, 'state') else target.rect.y
-
                         if target.mask.overlap(succi.mask, (succi_blit_x - tx, succi_blit_y - ty)):
                             if succi.take_damage():
                                 game_over = True
@@ -310,7 +319,35 @@ while run:
                                 except NameError:
                                     pass
 
-            if current_state == "LEVEL_1":
+            # Process Projectile hitting enemies
+            for proj in projectile_group:
+                if proj.state == "fly":
+                    for group in enemy_groups_to_check:
+                        for target in group:
+                            ty = target.rect.top if hasattr(target, 'state') else target.rect.y
+                            if proj.mask.overlap(target.mask, (target.rect.x - proj.rect.x, ty - proj.rect.y)):
+                                proj.explode()
+
+                                # If the enemy has the 2-shot health system (Lvl 2)
+                                if hasattr(target, 'take_damage'):
+                                    died = target.take_damage()
+                                    if died:
+                                        rem += target.rem_value
+                                        target.kill()
+                                else:
+                                    # 1-shot kill (Lvl 1 enemies and Flyers)
+                                    rem += target.rem_value
+                                    target.kill()
+
+                                try:
+                                    explode_fx.play()
+                                except NameError:
+                                    pass
+                                break
+                        if proj.state != "fly": break
+
+            # E Key door entry warped to work in BOTH Level 1 and Level 2
+            if current_state == "LEVEL_1" or current_state == "LEVEL_2":
                 current_bg_index = int(succi.x // current_level.bg_w)
                 if current_bg_index >= current_level.max_backgrounds - 1:
                     if keys[pygame.K_e]:
@@ -325,6 +362,7 @@ while run:
                         succi.x = 400.0
 
         elif current_state == "MERCHANT":
+            # ... rest of merchant drawing code stays the same
             if merchant_npc and merchant_npc.state == "intro":
                 merchant_npc.draw(screen)
             elif merchant_npc and merchant_npc.state == "idle" and merchant_ui:

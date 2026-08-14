@@ -1,7 +1,7 @@
 # --- level.py ---#
 import pygame
 import random
-from entities import Enemy, Demon, Skeleton, Platform
+from entities import Enemy, Demon, Skeleton, Platform, Helldog, Mau, Pkgrim
 
 
 def trim_black_side_borders(surface, threshold=15):
@@ -239,27 +239,25 @@ class Merchant_Room:
 
 class Level_02(Level_01):
     def __init__(self, screen_width, screen_height):
-        self.platform_offset_ratio = 0.22  # Adjust this if needed based on our last step!
+        self.platform_offset_ratio = 0.22
         super().__init__(screen_width, screen_height)
 
+        # Level 2 Specific Enemy Groups
+        self.helldog_group = pygame.sprite.Group()
+        self.mau_group = pygame.sprite.Group()
+        self.pkgrim_group = pygame.sprite.Group()
+
     def load_assets(self):
-        # Create the base sequence for Level 2
         base_bg_filenames = [
-            "backgrounds/lvl_2_bgs/bg1.png",
-            "backgrounds/lvl_2_bgs/bg2.png",
-            "backgrounds/lvl_2_bgs/bg3.png",
-            "backgrounds/lvl_2_bgs/bg4.png",
-            "backgrounds/lvl_2_bgs/bg5.png",
-            "backgrounds/lvl_2_bgs/bg6.png",
-            "backgrounds/lvl_2_bgs/bg7.png",
-            "backgrounds/lvl_2_bgs/bg8.png"
+            "backgrounds/lvl_2_bgs/bg1.png", "backgrounds/lvl_2_bgs/bg2.png",
+            "backgrounds/lvl_2_bgs/bg3.png", "backgrounds/lvl_2_bgs/bg4.png",
+            "backgrounds/lvl_2_bgs/bg5.png", "backgrounds/lvl_2_bgs/bg6.png",
+            "backgrounds/lvl_2_bgs/bg7.png", "backgrounds/lvl_2_bgs/bg8.png"
         ]
 
-        # Loop it twice (16 backgrounds) and append the final one
         full_bg_filenames = base_bg_filenames * 2
         full_bg_filenames.append("backgrounds/lvl_2_bgs/bg9.png")
 
-        # Load and scale them seamlessly
         first_raw = pygame.image.load(full_bg_filenames[0]).convert()
         first_trimmed = trim_black_side_borders(first_raw)
         bg_scale_ratio = self.screen_height / first_trimmed.get_height()
@@ -267,11 +265,8 @@ class Level_02(Level_01):
 
         self.bg_list = [pygame.transform.smoothscale(trim_black_side_borders(pygame.image.load(f).convert()),
                                                      (self.bg_w, self.screen_height)) for f in full_bg_filenames]
-
-        # Ensure max backgrounds syncs up with our list length (17)
         self.max_backgrounds = len(full_bg_filenames)
 
-        # Floor Setup
         floor_img = pygame.image.load("mats/floor2.PNG").convert()
         floor_img.set_colorkey((0, 0, 0))
         self.target_floor_h = 200
@@ -282,23 +277,91 @@ class Level_02(Level_01):
 
         self.platform_image = pygame.image.load("mats/plat31c.png").convert_alpha()
 
-        # Load Level 2 platforms
         try:
             plat2_raw = pygame.image.load("mats/platforms/lvl2_p2.png").convert_alpha()
             plat3_raw = pygame.image.load("mats/platforms/lvl2_p3.PNG").convert_alpha()
-
-            self.platform_images = [
-                trim_transparent_borders(plat2_raw),
-                trim_transparent_borders(plat3_raw)
-            ]
+            self.platform_images = [trim_transparent_borders(plat2_raw), trim_transparent_borders(plat3_raw)]
         except pygame.error as e:
             print(f"Error loading Level 2 platforms: {e}")
             self.platform_images = [self.platform_image]
 
-        # Enemies Setup
         self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
-        self.demon_walk_r, self.demon_walk_l = load_enemy_frames("spritsheets/enemies/D_WALK_SSNB.png", 7, 0.35)
-        self.demon_attack_r, self.demon_attack_l = load_enemy_frames("spritsheets/enemies/D_attack_SSNB.png", 12, 0.35)
-        self.skel_walk_r, self.skel_walk_l = load_enemy_frames("spritsheets/enemies/skelly_walk_NB.png", 8, 0.7)
-        self.skel_idle_r, self.skel_idle_l = load_enemy_frames("spritsheets/enemies/skelly_idle_NB.png", 10, 0.7)
-        self.skel_attack_r, self.skel_attack_l = load_enemy_frames("spritsheets/enemies/skelly_attack_NB.png", 10, 0.7)
+
+        # Load the new enemies with your specific frame counts
+        enemy_scale = 0.55
+        self.hd_walk_r, self.hd_walk_l = load_enemy_frames("spritsheets/enemies/lvl_2_enemies/helldog_walk_ss.png", 8,
+                                                           enemy_scale)
+        self.hd_atk_r, self.hd_atk_l = load_enemy_frames("spritsheets/enemies/lvl_2_enemies/helldog_attack_ss.png", 11,
+                                                         enemy_scale)
+
+        self.mau_walk_r, self.mau_walk_l = load_enemy_frames("spritsheets/enemies/lvl_2_enemies/mau_walk_ss.png", 10,
+                                                             enemy_scale)
+        self.mau_atk_r, self.mau_atk_l = load_enemy_frames("spritsheets/enemies/lvl_2_enemies/mau_attack_ss.png", 12,
+                                                           enemy_scale)
+
+        self.pk_walk_r, self.pk_walk_l = load_enemy_frames("spritsheets/enemies/lvl_2_enemies/pkgrim_walk_ss.png", 8,
+                                                           enemy_scale)
+        self.pk_atk_r, self.pk_atk_l = load_enemy_frames("spritsheets/enemies/lvl_2_enemies/pkgrim_attack_ss.png", 10,
+                                                         enemy_scale)
+
+    def reset(self):
+        super().reset()
+        self.helldog_group.empty()
+        self.mau_group.empty()
+        self.pkgrim_group.empty()
+
+    def update(self, dt, camera_x, player_x, player_y):
+        for platform in list(self.platform_group):
+            if platform.rect.right < camera_x - 4000: platform.kill()
+
+        if camera_x + self.screen_width < self.level_end_x - 500:
+            if len(self.platform_group) < 40:
+                last_p = max(self.platform_group, key=lambda p: p.rect.x, default=None)
+                p_x = (last_p.rect.right + random.randint(120, 290)) if last_p else (camera_x + self.screen_width + 100)
+                chosen_plat_img = random.choice(self.platform_images)
+                self.platform_group.add(
+                    Platform(p_x, random.randint(320, 625), random.randint(90, 200), chosen_plat_img,
+                             self.platform_offset_ratio))
+
+            if len(self.enemy_group) < 3 and random.randint(1, 60) == 1:
+                side = random.choice(["left", "right"])
+                ex = (camera_x - 150) if side == "left" else (camera_x + self.screen_width + 150)
+                self.enemy_group.add(Enemy(ex, random.randint(200, 550), self.bird_sheet_img, .15,
+                                           forced_direction=1 if side == "left" else -1))
+
+        current_bg_index = int(player_x // self.bg_w)
+
+        if current_bg_index > self.last_spawned_bg_index and current_bg_index < self.max_backgrounds - 1:
+            t_bg = current_bg_index + 1
+            p_start, p_end = t_bg * self.bg_w, (t_bg + 1) * self.bg_w - 100
+
+            # 3-WAY SCRIPTED ENEMY DISTRIBUTION
+            if t_bg % 3 == 0:
+                self.helldog_group.add(
+                    Helldog(p_start + 100, self.y_ground, p_start, p_end, self.hd_walk_r, self.hd_walk_l, self.hd_atk_r,
+                            self.hd_atk_l))
+            elif t_bg % 3 == 1:
+                self.pkgrim_group.add(
+                    Pkgrim(p_start + 100, self.y_ground, p_start, p_end, self.pk_walk_r, self.pk_walk_l, self.pk_atk_r,
+                           self.pk_atk_l))
+            else:
+                self.mau_group.add(
+                    Mau(p_start + 100, self.y_ground, p_start, p_end, self.mau_walk_r, self.mau_walk_l, self.mau_atk_r,
+                        self.mau_atk_l))
+
+            self.last_spawned_bg_index = current_bg_index
+
+        self.enemy_group.update(camera_x, self.screen_width)
+        self.helldog_group.update(camera_x, player_x, player_y)
+        self.mau_group.update(camera_x, player_x, player_y)
+        self.pkgrim_group.update(camera_x, player_x, player_y)
+
+    def draw(self, screen, camera_x):
+        # Draw Backgrounds, Floor, and Platforms from Level_01
+        super().draw(screen, camera_x)
+
+        # Draw our new Lvl 2 enemies
+        for group in [self.helldog_group, self.mau_group, self.pkgrim_group]:
+            for enemy in group:
+                if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
+                    screen.blit(enemy.image, (x, enemy.rect.top))
