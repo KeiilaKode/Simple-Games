@@ -193,10 +193,20 @@ class Projectile(pygame.sprite.Sprite):
 
 
 class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, platform_image):
+    def __init__(self, x, y, width, platform_image, offset_ratio=0.0):
         super().__init__()
-        self.image = pygame.transform.scale(platform_image, (width, 25))
+        orig_w, orig_h = platform_image.get_size()
+
+        # Scale proportionally to preserve the chunky 3D floating island look
+        scale = width / orig_w
+        height = int(orig_h * scale)
+
+        self.image = pygame.transform.smoothscale(platform_image, (width, height))
         self.rect = self.image.get_rect(topleft=(x, y))
+
+        # Only apply a vertical offset if specified (e.g. for Level 2 3D islands)
+        top_offset = int(height * offset_ratio)
+        self.collision_rect = pygame.Rect(self.rect.x, self.rect.y + top_offset, self.rect.width, 10)
 
 
 class Merchant(pygame.sprite.Sprite):

@@ -1,3 +1,4 @@
+# --- level.py ---#
 import pygame
 import random
 from entities import Enemy, Demon, Skeleton, Platform
@@ -26,6 +27,23 @@ def trim_black_side_borders(surface, threshold=15):
     return surface
 
 
+def trim_transparent_borders(surface):
+    w, h = surface.get_size()
+    left, right, top, bottom = w, 0, h, 0
+
+    for y in range(h):
+        for x in range(w):
+            if surface.get_at((x, y)).a > 0:
+                if x < left: left = x
+                if x > right: right = x
+                if y < top: top = y
+                if y > bottom: bottom = y
+
+    if right >= left and bottom >= top:
+        return surface.subsurface((left, top, (right - left) + 1, (bottom - top) + 1)).copy()
+    return surface
+
+
 def load_enemy_frames(filename, num_frames, scale):
     sheet = pygame.image.load(filename).convert_alpha()
     frames_r, frames_l = [], []
@@ -45,8 +63,11 @@ class Level_01:
         self.screen_height = screen_height
         self.y_ground = 730.0
 
-        # 8 backgrounds * 2 loops = 16 + 1 Merchant Door = 17 Total
         self.max_backgrounds = 17
+
+        # Only default to 0.0 if a subclass (like Level 2) hasn't already set it
+        if not hasattr(self, 'platform_offset_ratio'):
+            self.platform_offset_ratio = 0.0
 
         self.platform_group = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
@@ -57,13 +78,17 @@ class Level_01:
         self.load_assets()
 
         self.level_end_x = self.max_backgrounds * self.bg_w
-
-        # Exact world X coordinate where the merchant door sits on the 17th background
         self.door_world_x = ((self.max_backgrounds - 1) * self.bg_w) + 900
 
-        self.platform_group.add(Platform(200, 580, 180, self.platform_image))
-        self.platform_group.add(Platform(450, 380, 200, self.platform_image))
-        self.platform_group.add(Platform(800, 480, 160, self.platform_image))
+        if not hasattr(self, 'platform_images') or not self.platform_images:
+            self.platform_images = [self.platform_image]
+
+        self.platform_group.add(
+            Platform(200, 580, 180, random.choice(self.platform_images), self.platform_offset_ratio))
+        self.platform_group.add(
+            Platform(450, 380, 200, random.choice(self.platform_images), self.platform_offset_ratio))
+        self.platform_group.add(
+            Platform(800, 480, 160, random.choice(self.platform_images), self.platform_offset_ratio))
 
     def load_assets(self):
         base_bg_filenames = [
@@ -102,17 +127,18 @@ class Level_01:
         self.skel_attack_r, self.skel_attack_l = load_enemy_frames("spritsheets/enemies/skelly_attack_NB.png", 10, 0.7)
 
     def reset(self):
-        """Resets level entities without re-loading images from disk."""
         self.platform_group.empty()
         self.enemy_group.empty()
         self.demon_group.empty()
         self.skeleton_group.empty()
         self.last_spawned_bg_index = -1
 
-        # Re-add starting platforms
-        self.platform_group.add(Platform(200, 580, 180, self.platform_image))
-        self.platform_group.add(Platform(450, 380, 200, self.platform_image))
-        self.platform_group.add(Platform(800, 480, 160, self.platform_image))
+        self.platform_group.add(
+            Platform(200, 580, 180, random.choice(self.platform_images), self.platform_offset_ratio))
+        self.platform_group.add(
+            Platform(450, 380, 200, random.choice(self.platform_images), self.platform_offset_ratio))
+        self.platform_group.add(
+            Platform(800, 480, 160, random.choice(self.platform_images), self.platform_offset_ratio))
 
     def update(self, dt, camera_x, player_x, player_y):
         for platform in list(self.platform_group):
@@ -122,8 +148,11 @@ class Level_01:
             if len(self.platform_group) < 40:
                 last_p = max(self.platform_group, key=lambda p: p.rect.x, default=None)
                 p_x = (last_p.rect.right + random.randint(120, 290)) if last_p else (camera_x + self.screen_width + 100)
+
+                chosen_plat_img = random.choice(self.platform_images)
                 self.platform_group.add(
-                    Platform(p_x, random.randint(320, 625), random.randint(90, 200), self.platform_image))
+                    Platform(p_x, random.randint(320, 625), random.randint(90, 200), chosen_plat_img,
+                             self.platform_offset_ratio))
 
             if len(self.enemy_group) < 3 and random.randint(1, 60) == 1:
                 side = random.choice(["left", "right"])
@@ -210,11 +239,10 @@ class Merchant_Room:
 
 class Level_02(Level_01):
     def __init__(self, screen_width, screen_height):
-        # Initialize exactly like Level 1, but we override the asset loading
+        self.platform_offset_ratio = 0.22  # Set this BEFORE super() so it's active right away
         super().__init__(screen_width, screen_height)
 
     def load_assets(self):
-        # Override Level 1 assets to use the new purple forest background
         raw_bg = pygame.image.load("backgrounds/lvl_2_bgs/level_2bg.png").convert()
         trimmed_bg = trim_black_side_borders(raw_bg)
         bg_scale_ratio = self.screen_height / trimmed_bg.get_height()
@@ -222,11 +250,9 @@ class Level_02(Level_01):
 
         scaled_bg = pygame.transform.smoothscale(trimmed_bg, (self.bg_w, self.screen_height))
 
-        # Make Level 2 longer (e.g., 25 backgrounds)
         self.max_backgrounds = 25
         self.bg_list = [scaled_bg for _ in range(self.max_backgrounds)]
 
-        # Load floor and enemy assets
         floor_img = pygame.image.load("mats/floor2.PNG").convert()
         floor_img.set_colorkey((0, 0, 0))
         self.target_floor_h = 200
@@ -236,6 +262,19 @@ class Level_02(Level_01):
         self.floor_flip_img = pygame.transform.flip(self.floor_img, True, False)
 
         self.platform_image = pygame.image.load("mats/plat31c.png").convert_alpha()
+
+        try:
+            plat2_raw = pygame.image.load("mats/platforms/lvl2_p2.png").convert_alpha()
+            plat3_raw = pygame.image.load("mats/platforms/lvl2_p3.PNG").convert_alpha()
+
+            self.platform_images = [
+                trim_transparent_borders(plat2_raw),
+                trim_transparent_borders(plat3_raw)
+            ]
+        except pygame.error as e:
+            print(f"Error loading Level 2 platforms: {e}")
+            self.platform_images = [self.platform_image]
+
         self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
 
         self.demon_walk_r, self.demon_walk_l = load_enemy_frames("spritsheets/enemies/D_WALK_SSNB.png", 7, 0.35)

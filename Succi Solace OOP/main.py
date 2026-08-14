@@ -1,3 +1,4 @@
+# --- main.py ---#
 import pygame
 import sys
 import os
@@ -167,6 +168,21 @@ while run:
             elif event.key == pygame.K_m and current_state == "LEVEL_1":
                 succi.x = current_level.door_world_x
                 camera_x = current_level.level_end_x - SCREEN_WIDTH
+            elif event.key == pygame.K_n:
+                # DEBUG SHORTCUT: Instantly jump to Level 2
+                current_state = "LEVEL_2"
+                checkpoint = 2
+                current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
+                succi = Player(400.0, current_level.y_ground, animations, animation_speeds, animation_scale_corrections,
+                               jump_fx, cast_fx)
+                succi.max_health = 3
+                succi.health = 3
+                camera_x = 0.0
+                projectile_group.empty()
+                pygame.mixer.music.load("mats/Toccata and Fugue in Dm, BWV 565.mp3")
+                pygame.mixer.music.set_volume(0.2)
+                pygame.mixer.music.play(-1, 0.0)
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_click = True
 

@@ -108,9 +108,10 @@ class Player(pygame.sprite.Sprite):
             self.y += self.vy * dt
 
             for platform in platform_group:
-                if self.vy > 0 and platform.rect.colliderect(self.x - 20, self.y - 5, 40, 10):
-                    if self.y - self.vy * dt <= platform.rect.top + 10:
-                        self.y = platform.rect.top
+                col_rect = getattr(platform, 'collision_rect', platform.rect)
+                if self.vy > 0 and col_rect.colliderect(self.x - 20, self.y - 5, 40, 10):
+                    if self.y - self.vy * dt <= col_rect.top + 10:
+                        self.y = col_rect.top
                         self.vy = 0
                         self.on_ground = True
                         break
@@ -122,7 +123,8 @@ class Player(pygame.sprite.Sprite):
         else:
             on_platform = False
             for platform in platform_group:
-                if platform.rect.colliderect(self.x - 20, self.y, 40, 5):
+                col_rect = getattr(platform, 'collision_rect', platform.rect)
+                if col_rect.colliderect(self.x - 20, self.y, 40, 5):
                     on_platform = True
                     break
             if not on_platform and self.y < self.y_ground:
