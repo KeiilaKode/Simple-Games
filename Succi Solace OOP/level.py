@@ -239,20 +239,39 @@ class Merchant_Room:
 
 class Level_02(Level_01):
     def __init__(self, screen_width, screen_height):
-        self.platform_offset_ratio = 0.22  # Set this BEFORE super() so it's active right away
+        self.platform_offset_ratio = 0.22  # Adjust this if needed based on our last step!
         super().__init__(screen_width, screen_height)
 
     def load_assets(self):
-        raw_bg = pygame.image.load("backgrounds/lvl_2_bgs/level_2bg.png").convert()
-        trimmed_bg = trim_black_side_borders(raw_bg)
-        bg_scale_ratio = self.screen_height / trimmed_bg.get_height()
-        self.bg_w = int(trimmed_bg.get_width() * bg_scale_ratio) - 1
+        # Create the base sequence for Level 2
+        base_bg_filenames = [
+            "backgrounds/lvl_2_bgs/bg1.png",
+            "backgrounds/lvl_2_bgs/bg2.png",
+            "backgrounds/lvl_2_bgs/bg3.png",
+            "backgrounds/lvl_2_bgs/bg4.png",
+            "backgrounds/lvl_2_bgs/bg5.png",
+            "backgrounds/lvl_2_bgs/bg6.png",
+            "backgrounds/lvl_2_bgs/bg7.png",
+            "backgrounds/lvl_2_bgs/bg8.png"
+        ]
 
-        scaled_bg = pygame.transform.smoothscale(trimmed_bg, (self.bg_w, self.screen_height))
+        # Loop it twice (16 backgrounds) and append the final one
+        full_bg_filenames = base_bg_filenames * 2
+        full_bg_filenames.append("backgrounds/lvl_2_bgs/bg9.png")
 
-        self.max_backgrounds = 25
-        self.bg_list = [scaled_bg for _ in range(self.max_backgrounds)]
+        # Load and scale them seamlessly
+        first_raw = pygame.image.load(full_bg_filenames[0]).convert()
+        first_trimmed = trim_black_side_borders(first_raw)
+        bg_scale_ratio = self.screen_height / first_trimmed.get_height()
+        self.bg_w = int(first_trimmed.get_width() * bg_scale_ratio) - 1
 
+        self.bg_list = [pygame.transform.smoothscale(trim_black_side_borders(pygame.image.load(f).convert()),
+                                                     (self.bg_w, self.screen_height)) for f in full_bg_filenames]
+
+        # Ensure max backgrounds syncs up with our list length (17)
+        self.max_backgrounds = len(full_bg_filenames)
+
+        # Floor Setup
         floor_img = pygame.image.load("mats/floor2.PNG").convert()
         floor_img.set_colorkey((0, 0, 0))
         self.target_floor_h = 200
@@ -263,6 +282,7 @@ class Level_02(Level_01):
 
         self.platform_image = pygame.image.load("mats/plat31c.png").convert_alpha()
 
+        # Load Level 2 platforms
         try:
             plat2_raw = pygame.image.load("mats/platforms/lvl2_p2.png").convert_alpha()
             plat3_raw = pygame.image.load("mats/platforms/lvl2_p3.PNG").convert_alpha()
@@ -275,8 +295,8 @@ class Level_02(Level_01):
             print(f"Error loading Level 2 platforms: {e}")
             self.platform_images = [self.platform_image]
 
+        # Enemies Setup
         self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
-
         self.demon_walk_r, self.demon_walk_l = load_enemy_frames("spritsheets/enemies/D_WALK_SSNB.png", 7, 0.35)
         self.demon_attack_r, self.demon_attack_l = load_enemy_frames("spritsheets/enemies/D_attack_SSNB.png", 12, 0.35)
         self.skel_walk_r, self.skel_walk_l = load_enemy_frames("spritsheets/enemies/skelly_walk_NB.png", 8, 0.7)
