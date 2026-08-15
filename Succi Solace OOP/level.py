@@ -6,24 +6,58 @@ from entities import Enemy, Demon, Skeleton, Platform, Helldog, Mau, Pkgrim
 
 def trim_black_side_borders(surface, threshold=15):
     w, h = surface.get_size()
-    left, right = 0, w
+    left, right, top, bottom = 0, w, 0, h
+
+    # Trim Left
     for x in range(w // 4):
-        has_content = False
-        for y in range(0, h, 10):
-            color = surface.get_at((x, y))
-            if color.r > threshold or color.g > threshold or color.b > threshold:
-                has_content = True
-                break
-        if has_content: left = x; break
+        has_content = any(
+            surface.get_at((x, y)).r > threshold or
+            surface.get_at((x, y)).g > threshold or
+            surface.get_at((x, y)).b > threshold
+            for y in range(0, h, 10)
+        )
+        if has_content:
+            left = x
+            break
+
+    # Trim Right
     for x in range(w - 1, w - 1 - (w // 4), -1):
-        has_content = False
-        for y in range(0, h, 10):
-            color = surface.get_at((x, y))
-            if color.r > threshold or color.g > threshold or color.b > threshold:
-                has_content = True
-                break
-        if has_content: right = x + 1; break
-    if right > left: return surface.subsurface((left, 0, right - left, h)).copy()
+        has_content = any(
+            surface.get_at((x, y)).r > threshold or
+            surface.get_at((x, y)).g > threshold or
+            surface.get_at((x, y)).b > threshold
+            for y in range(0, h, 10)
+        )
+        if has_content:
+            right = x + 1
+            break
+
+    # Trim Top
+    for y in range(h // 4):
+        has_content = any(
+            surface.get_at((x, y)).r > threshold or
+            surface.get_at((x, y)).g > threshold or
+            surface.get_at((x, y)).b > threshold
+            for x in range(left, right, 10)
+        )
+        if has_content:
+            top = y
+            break
+
+    # Trim Bottom
+    for y in range(h - 1, h - 1 - (h // 4), -1):
+        has_content = any(
+            surface.get_at((x, y)).r > threshold or
+            surface.get_at((x, y)).g > threshold or
+            surface.get_at((x, y)).b > threshold
+            for x in range(left, right, 10)
+        )
+        if has_content:
+            bottom = y + 1
+            break
+
+    if right > left and bottom > top:
+        return surface.subsurface((left, top, right - left, bottom - top)).copy()
     return surface
 
 
@@ -65,7 +99,9 @@ class Level_01:
 
         self.max_backgrounds = 17
 
-        # Only default to 0.0 if a subclass (like Level 2) hasn't already set it
+        if not hasattr(self, 'floor_y_offset'):
+            self.floor_y_offset = 30
+
         if not hasattr(self, 'platform_offset_ratio'):
             self.platform_offset_ratio = 0.0
 
@@ -191,7 +227,8 @@ class Level_01:
         for i in range(s_floor, s_floor + (self.screen_width // self.floor_w) + 2):
             if (i * self.floor_w) < self.level_end_x:
                 screen.blit(self.floor_img if i % 2 == 0 else self.floor_flip_img,
-                            ((i * self.floor_w) - camera_x, self.screen_height - self.target_floor_h + 30))
+                            ((i * self.floor_w) - camera_x,
+                             self.screen_height - self.target_floor_h + self.floor_y_offset))
 
         for p in self.platform_group:
             if -200 < (px := p.rect.x - camera_x) < self.screen_width + 200: screen.blit(p.image, (px, p.rect.y))
@@ -240,6 +277,7 @@ class Merchant_Room:
 class Level_02(Level_01):
     def __init__(self, screen_width, screen_height):
         self.platform_offset_ratio = 0.22
+        self.floor_y_offset = 0
         super().__init__(screen_width, screen_height)
 
         # Level 2 Specific Enemy Groups
@@ -267,8 +305,8 @@ class Level_02(Level_01):
                                                      (self.bg_w, self.screen_height)) for f in full_bg_filenames]
         self.max_backgrounds = len(full_bg_filenames)
 
-        floor_img = pygame.image.load("mats/floor2.PNG").convert()
-        floor_img.set_colorkey((0, 0, 0))
+        floor_img = pygame.image.load("mats/platforms/lvl2_floor.png").convert_alpha()
+
         self.target_floor_h = 200
         floor_scale_ratio = self.target_floor_h / floor_img.get_height()
         self.floor_w = int(floor_img.get_width() * floor_scale_ratio) - 1
@@ -287,7 +325,6 @@ class Level_02(Level_01):
 
         self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
 
-        # Load the new enemies with your specific frame counts
         enemy_scale = 0.55
         self.hd_walk_r, self.hd_walk_l = load_enemy_frames("spritsheets/enemies/lvl_2_enemies/helldog_walk_ss.png", 8,
                                                            enemy_scale)
@@ -335,7 +372,6 @@ class Level_02(Level_01):
             t_bg = current_bg_index + 1
             p_start, p_end = t_bg * self.bg_w, (t_bg + 1) * self.bg_w - 100
 
-            # 3-WAY SCRIPTED ENEMY DISTRIBUTION
             if t_bg % 3 == 0:
                 self.helldog_group.add(
                     Helldog(p_start + 100, self.y_ground, p_start, p_end, self.hd_walk_r, self.hd_walk_l, self.hd_atk_r,
@@ -357,11 +393,83 @@ class Level_02(Level_01):
         self.pkgrim_group.update(camera_x, player_x, player_y)
 
     def draw(self, screen, camera_x):
-        # Draw Backgrounds, Floor, and Platforms from Level_01
         super().draw(screen, camera_x)
-
-        # Draw our new Lvl 2 enemies
         for group in [self.helldog_group, self.mau_group, self.pkgrim_group]:
             for enemy in group:
                 if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
                     screen.blit(enemy.image, (x, enemy.rect.top))
+
+
+# --- NEW LEVEL 3 CLASS ---
+class Level_03(Level_01):
+    def __init__(self, screen_width, screen_height):
+        self.platform_offset_ratio = 0.22
+        self.floor_y_offset = 0
+        super().__init__(screen_width, screen_height)
+
+    def load_assets(self):
+        # Explicitly build the background list for castles 1-19
+        full_bg_filenames = []
+        for i in range(1, 20):
+            # Checking for that uppercase .PNG extension on castle 5
+            if i == 5:
+                full_bg_filenames.append("backgrounds/lvl_3_bgs/castle5.PNG")
+            else:
+                full_bg_filenames.append(f"backgrounds/lvl_3_bgs/castle{i}.png")
+
+        first_raw = pygame.image.load(full_bg_filenames[0]).convert()
+        first_trimmed = trim_black_side_borders(first_raw)
+        bg_scale_ratio = self.screen_height / first_trimmed.get_height()
+        self.bg_w = int(first_trimmed.get_width() * bg_scale_ratio) - 1
+
+        self.bg_list = [pygame.transform.smoothscale(trim_black_side_borders(pygame.image.load(f).convert()),
+                                                     (self.bg_w, self.screen_height)) for f in full_bg_filenames]
+        self.max_backgrounds = len(full_bg_filenames)
+
+        # Load the Level 3 floor
+        floor_img = pygame.image.load("mats/platforms/lvl3_floor.png").convert_alpha()
+
+        self.target_floor_h = 200
+        floor_scale_ratio = self.target_floor_h / floor_img.get_height()
+        self.floor_w = int(floor_img.get_width() * floor_scale_ratio) - 1
+        self.floor_img = pygame.transform.smoothscale(floor_img, (self.floor_w, self.target_floor_h))
+        self.floor_flip_img = pygame.transform.flip(self.floor_img, True, False)
+
+        self.platform_image = pygame.image.load("mats/plat31c.png").convert_alpha()
+
+        # Re-use Level 2 platforms temporarily
+        try:
+            plat2_raw = pygame.image.load("mats/platforms/lvl2_p2.png").convert_alpha()
+            plat3_raw = pygame.image.load("mats/platforms/lvl2_p3.PNG").convert_alpha()
+            self.platform_images = [trim_transparent_borders(plat2_raw), trim_transparent_borders(plat3_raw)]
+        except pygame.error as e:
+            print(f"Error loading Level 3 platforms: {e}")
+            self.platform_images = [self.platform_image]
+
+        self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
+
+    def update(self, dt, camera_x, player_x, player_y):
+        # Override update to completely ignore ground spawns
+        for platform in list(self.platform_group):
+            if platform.rect.right < camera_x - 4000: platform.kill()
+
+        if camera_x + self.screen_width < self.level_end_x - 500:
+            if len(self.platform_group) < 40:
+                last_p = max(self.platform_group, key=lambda p: p.rect.x, default=None)
+                p_x = (last_p.rect.right + random.randint(120, 290)) if last_p else (camera_x + self.screen_width + 100)
+                chosen_plat_img = random.choice(self.platform_images)
+                self.platform_group.add(
+                    Platform(p_x, random.randint(320, 625), random.randint(90, 200), chosen_plat_img,
+                             self.platform_offset_ratio))
+
+            if len(self.enemy_group) < 3 and random.randint(1, 60) == 1:
+                side = random.choice(["left", "right"])
+                ex = (camera_x - 150) if side == "left" else (camera_x + self.screen_width + 150)
+                self.enemy_group.add(Enemy(ex, random.randint(200, 550), self.bird_sheet_img, .15,
+                                           forced_direction=1 if side == "left" else -1))
+
+        self.enemy_group.update(camera_x, self.screen_width)
+
+    def draw(self, screen, camera_x):
+        # Base class draw will cleanly handle bg, floors, platforms, and our flyers
+        super().draw(screen, camera_x)

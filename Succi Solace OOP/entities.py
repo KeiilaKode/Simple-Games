@@ -210,7 +210,7 @@ class Platform(pygame.sprite.Sprite):
 
 
 class Merchant(pygame.sprite.Sprite):
-    def __init__(self, screen_width, screen_height, sheet_filename, columns=7, rows=4):
+    def __init__(self, screen_width, screen_height, sheet_filename, columns=7, rows=4, target_duration=10000):
         super().__init__()
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -238,7 +238,10 @@ class Merchant(pygame.sprite.Sprite):
 
         self.frame_index = 0
         self.animation_timer = 0
-        self.anim_speed = 357
+
+        # Automatically fit the total animation duration to ~10 seconds (10000 ms)
+        # based on however many frames are in the sheet!
+        self.anim_speed = max(20, int(target_duration / len(self.intro_frames)))
         self.state = "intro"
 
         self.image = self.intro_frames[0]
@@ -267,8 +270,9 @@ class Merchant(pygame.sprite.Sprite):
 
 
 class Merchant_UI:
-    def __init__(self, screen_width, screen_height):
+    def __init__(self, screen_width, screen_height, sold_out_ref):
         try:
+            self.sold_out = sold_out_ref  # Keeps the persistent reference
             raw_bg = pygame.image.load("backgrounds/M_inventory_empty.png").convert()
             self.bg = pygame.transform.smoothscale(raw_bg, (screen_width, screen_height))
 
@@ -277,6 +281,9 @@ class Merchant_UI:
             self.mana_p = pygame.transform.smoothscale(pygame.image.load("mats/mana_p.png").convert_alpha(), (110, 150))
             self.purple_p = pygame.transform.smoothscale(pygame.image.load("mats/purple_p.png").convert_alpha(),
                                                          (110, 150))
+            # --- NEW RAINBOW POTION LOADER ---
+            self.rainbow_p = pygame.transform.smoothscale(pygame.image.load("mats/secret_potion.png").convert_alpha(),
+                                                          (110, 150))
 
             wings_raw = pygame.image.load("mats/wings_p_ss.png").convert_alpha()
             ww, wh = wings_raw.get_size()
@@ -289,17 +296,12 @@ class Merchant_UI:
             print(f"Error loading UI: {e}")
             sys.exit()
 
-        self.sold_out = {
-            "Health Potion": False,
-            "Mana Potion": False,
-            "Wings Potion": False,
-            "Purple Potion": False
-        }
-
         self.slot_1_rect = pygame.Rect(680, 165, 130, 130)
         self.slot_2_rect = pygame.Rect(890, 165, 130, 130)
         self.slot_3_rect = pygame.Rect(1100, 165, 130, 130)
         self.slot_4_rect = pygame.Rect(680, 360, 130, 130)
+        # ---> THIS IS THE SLOT RIGHT UNDER THE BLUE POTION (Middle Column, Second Row) <---
+        self.slot_5_rect = pygame.Rect(890, 360, 130, 130)
 
         self.buy_rect = pygame.Rect(250, 650, 240, 65)
 
@@ -319,15 +321,31 @@ class Merchant_UI:
             if mouse_click: self.selected_item = "Wings Potion"
         elif self.slot_4_rect.collidepoint(mouse_pos) and not self.sold_out["Purple Potion"]:
             if mouse_click: self.selected_item = "Purple Potion"
+        elif self.slot_5_rect.collidepoint(mouse_pos) and not self.sold_out["Rainbow Potion"]:
+            if mouse_click: self.selected_item = "Rainbow Potion"
 
-        if mouse_click and not (self.slot_1_rect.collidepoint(mouse_pos) or self.slot_2_rect.collidepoint(
-                mouse_pos) or self.slot_3_rect.collidepoint(mouse_pos) or self.slot_4_rect.collidepoint(
-                mouse_pos) or self.buy_rect.collidepoint(mouse_pos)):
+        # Combined click-away check (only ONE clean block that includes all slots)
+        if mouse_click and not (
+                self.slot_1_rect.collidepoint(mouse_pos) or
+                self.slot_2_rect.collidepoint(mouse_pos) or
+                self.slot_3_rect.collidepoint(mouse_pos) or
+                self.slot_4_rect.collidepoint(mouse_pos) or
+                self.slot_5_rect.collidepoint(mouse_pos) or
+                self.buy_rect.collidepoint(mouse_pos)
+        ):
             self.selected_item = None
 
         if mouse_click and self.buy_rect.collidepoint(mouse_pos):
             if self.selected_item == "Health Potion" and rem >= 50 and not self.sold_out["Health Potion"]:
                 bought_item = "Health Potion"
+            elif self.selected_item == "Mana Potion" and rem >= 75 and not self.sold_out["Mana Potion"]:
+                bought_item = "Mana Potion"
+            elif self.selected_item == "Wings Potion" and rem >= 150 and not self.sold_out["Wings Potion"]:
+                bought_item = "Wings Potion"
+            elif self.selected_item == "Purple Potion" and rem >= 75 and not self.sold_out["Purple Potion"]:
+                bought_item = "Purple Potion"
+            elif self.selected_item == "Rainbow Potion" and rem >= 100 and not self.sold_out["Rainbow Potion"]:
+                bought_item = "Rainbow Potion"
 
         return bought_item
 
@@ -354,6 +372,12 @@ class Merchant_UI:
             if self.slot_4_rect.collidepoint(mouse_pos):
                 pygame.draw.rect(screen, (255, 255, 255), self.slot_4_rect, 3)
 
+        # Draw Rainbow Potion if not sold out
+        if not self.sold_out["Rainbow Potion"]:
+            screen.blit(self.rainbow_p, (self.slot_5_rect.x + 10, self.slot_5_rect.y - 10))
+            if self.slot_5_rect.collidepoint(mouse_pos):
+                pygame.draw.rect(screen, (255, 255, 255), self.slot_5_rect, 3)
+
         if self.buy_rect.collidepoint(mouse_pos):
             pygame.draw.rect(screen, (255, 50, 50), self.buy_rect, 3, border_radius=8)
 
@@ -373,8 +397,13 @@ class Merchant_UI:
             screen.blit(self.font_desc.render("Coming Soon...", True, (200, 200, 200)), (text_x, 205))
         elif self.selected_item == "Purple Potion" and not self.sold_out["Purple Potion"]:
             screen.blit(self.font_title.render("Purple Potion", True, (180, 50, 255)), (text_x, 155))
-            screen.blit(self.font_desc.render("Coming Soon...", True, (200, 200, 200)), (text_x, 205))
-
+            screen.blit(self.font_desc.render("Changes the..Nature", True, (200, 200, 200)), (text_x, 205))
+            screen.blit(self.font_desc.render("of your Magic", True, (200, 200, 200)), (text_x, 230))
+            screen.blit(self.font_title.render("COST: 75 REM", True, (253, 117, 234)), (text_x, 260))
+        elif self.selected_item == "Rainbow Potion" and not self.sold_out["Rainbow Potion"]:
+            screen.blit(self.font_title.render("Rainbow Potion", True, (255, 100, 255)), (text_x, 155))
+            screen.blit(self.font_desc.render("Unlocks ultimate secrets.", True, (190, 200, 200)), (text_x, 205))
+            screen.blit(self.font_title.render("COST: 100 REM", True, (253, 117, 234)), (text_x, 240))
 
 class Helldog(pygame.sprite.Sprite):
     def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
@@ -388,13 +417,11 @@ class Helldog(pygame.sprite.Sprite):
         self.image = self.walk_frames_right[0]
 
         self.rect = self.image.get_rect(x=spawn_x)
-        # ADJUST THIS NUMBER to sink the feet through the transparent padding to touch the floor
         self.y_offset = 160
         self.rect.bottom = y_pos + self.y_offset
         self.mask = pygame.mask.from_surface(self.image)
 
     def take_damage(self):
-        """Reduces health and returns True if the enemy dies."""
         self.health -= 1
         return self.health <= 0
 
@@ -444,7 +471,6 @@ class Mau(pygame.sprite.Sprite):
         self.image = self.walk_frames_right[0]
 
         self.rect = self.image.get_rect(x=spawn_x)
-        # ADJUST THIS NUMBER to sink the feet through the transparent padding to touch the floor
         self.y_offset = 160
         self.rect.bottom = y_pos + self.y_offset
         self.mask = pygame.mask.from_surface(self.image)
@@ -499,7 +525,6 @@ class Pkgrim(pygame.sprite.Sprite):
         self.image = self.walk_frames_right[0]
 
         self.rect = self.image.get_rect(x=spawn_x)
-        # ADJUST THIS NUMBER to sink the feet through the transparent padding to touch the floor
         self.y_offset = 160
         self.rect.bottom = y_pos + self.y_offset
         self.mask = pygame.mask.from_surface(self.image)

@@ -7,7 +7,7 @@ from pygame import mixer, Color
 # OOP Imports
 from player import Player
 from entities import Projectile, Merchant, Merchant_UI
-from level import Level_01, Level_02, Merchant_Room
+from level import Level_01, Level_02, Level_03, Merchant_Room
 
 if getattr(sys, 'frozen', False):
     os.chdir(sys._MEIPASS)
@@ -52,9 +52,12 @@ try:
     laugh_fx = pygame.mixer.Sound("mats/laugh_bb.mp3")
     laugh_fx.set_volume(0.6)
 
-    # Merchant Departure Voice Line
     departure_fx = pygame.mixer.Sound("mats/merchant_departure.mp3")
     departure_fx.set_volume(0.6)
+
+    merchant_greet_lvl_2_fx = pygame.mixer.Sound("mats/merchant greet lvl 2.mp3")
+    merchant_greet_lvl_2_fx.set_volume(0.6)
+
 except pygame.error as e:
     print(f"Audio Load Warning: {e}")
 
@@ -105,6 +108,10 @@ animation_scale_corrections = {"idle": 1.0, "walk": 1.08, "run": 1.08, "jump": 1
 
 fireball_img = pygame.image.load("spritsheets/fireball.png").convert_alpha()
 explode_img = pygame.image.load("spritsheets/explode_NB.png").convert_alpha()
+
+purple_fireball_img = pygame.image.load("spritsheets/purple_spell.png").convert_alpha()
+purple_explode_img = pygame.image.load("spritsheets/purple_ball_explode.png").convert_alpha()
+
 end_image = pygame.transform.smoothscale(pygame.image.load("backgrounds/death_screen.png").convert_alpha(),
                                          (SCREEN_WIDTH, SCREEN_HEIGHT))
 
@@ -132,10 +139,23 @@ def draw_health_bar(health, max_health):
 # GAME STATE SETUP
 # ==========================================
 current_state = "LEVEL_1"
-checkpoint = 1  # 1 = Level 1, 2 = Level 2 unlocked checkpoint
+last_completed_level = "LEVEL_1"
+checkpoint = 1
 game_over, paused = False, False
 camera_x = 0.0
 rem = 0
+is_level_2_merchant = False
+
+global_merchant_sold_out = {
+    "Health Potion": False,
+    "Mana Potion": False,
+    "Wings Potion": False,
+    "Purple Potion": False,
+    "Rainbow Potion": False
+}
+
+player_has_purple_magic = False
+player_has_rainbow_dance = False
 
 current_level = Level_01(SCREEN_WIDTH, SCREEN_HEIGHT)
 merchant_room = Merchant_Room(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -165,12 +185,11 @@ while run:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
                 if not game_over: paused = not paused
-            # M Key warped to work in BOTH Level 1 and Level 2
-            elif event.key == pygame.K_m and (current_state == "LEVEL_1" or current_state == "LEVEL_2"):
+            # M Key warped to work in ALL Levels
+            elif event.key == pygame.K_m and current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
                 succi.x = current_level.door_world_x
                 camera_x = current_level.level_end_x - SCREEN_WIDTH
             elif event.key == pygame.K_n:
-                # DEBUG SHORTCUT: Instantly jump to Level 2
                 current_state = "LEVEL_2"
                 checkpoint = 2
                 current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -189,7 +208,7 @@ while run:
 
     if not game_over and not paused:
 
-        if current_state == "LEVEL_1" or current_state == "LEVEL_2":
+        if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
             succi.update(keys, dt, dt_ms, current_level.platform_group, animation_loops)
 
             if succi.x > current_level.level_end_x - 100:
@@ -199,9 +218,13 @@ while run:
                     succi.current_frame == (8 if succi.current_anim == "attack" else 4) and
                     not succi.fireball_spawned):
                 spawn_x = succi.x + (90 if succi.facing_right else -90)
+
+                active_fireball = purple_fireball_img if player_has_purple_magic else fireball_img
+                active_explode = purple_explode_img if player_has_purple_magic else explode_img
+
                 projectile_group.add(
-                    Projectile(spawn_x, succi.y - 180, 1 if succi.facing_right else -1, fireball_img, explode_img,
-                               0.28))
+                    Projectile(spawn_x, succi.y - 180, 1 if succi.facing_right else -1,
+                               active_fireball, active_explode, 0.28))
                 succi.fireball_spawned = True
                 try:
                     cast_fx.play()
@@ -221,16 +244,27 @@ while run:
             current_level.update(dt, camera_x, succi.x, succi.y)
             projectile_group.update(dt, camera_x, SCREEN_WIDTH)
 
-            # Projectile Hits & REM Collection
             for proj in projectile_group:
                 if proj.state == "fly":
-                    for group in [current_level.enemy_group, current_level.demon_group, current_level.skeleton_group]:
+                    enemy_targets = [current_level.enemy_group]
+                    if current_state == "LEVEL_1":
+                        enemy_targets.extend([current_level.demon_group, current_level.skeleton_group])
+                    elif current_state == "LEVEL_2":
+                        enemy_targets.extend(
+                            [current_level.helldog_group, current_level.mau_group, current_level.pkgrim_group])
+
+                    for group in enemy_targets:
                         for target in group:
                             ty = target.rect.top if hasattr(target, 'state') else target.rect.y
                             if proj.mask.overlap(target.mask, (target.rect.x - proj.rect.x, ty - proj.rect.y)):
                                 proj.explode()
-                                rem += target.rem_value
-                                target.kill()
+                                if hasattr(target, 'take_damage'):
+                                    if target.take_damage():
+                                        rem += target.rem_value
+                                        target.kill()
+                                else:
+                                    rem += target.rem_value
+                                    target.kill()
                                 try:
                                     explode_fx.play()
                                 except NameError:
@@ -240,48 +274,74 @@ while run:
 
             score = int(succi.x)
 
+
         elif current_state == "MERCHANT":
             if merchant_npc:
-                merchant_npc.update(dt_ms, merchant_voice_fx)
-
+                active_merchant_audio = merchant_greet_lvl_2_fx if is_level_2_merchant else merchant_voice_fx
+                merchant_npc.update(dt_ms, active_merchant_audio)
                 if merchant_npc.state == "idle" and merchant_ui is not None:
-                    # If not currently playing departure sound, process shop clicks
                     if not exiting_merchant:
                         bought_item = merchant_ui.update(mouse_pos, mouse_click, rem)
-
-                        if bought_item == "Health Potion":
-                            rem -= 50
-                            merchant_ui.sold_out["Health Potion"] = True
-                            merchant_ui.selected_item = None
+                        if bought_item:
                             try:
                                 laugh_fx.play()
                             except NameError:
                                 pass
 
+                            merchant_ui.sold_out[bought_item] = True
+                            merchant_ui.selected_item = None
+
+                        if bought_item == "Health Potion":
+                            rem -= 50
                             succi.max_health = 3
                             succi.health = 3
+                        elif bought_item == "Mana Potion":
+                            rem -= 75
+                        elif bought_item == "Wings Potion":
+                            rem -= 150
+                        elif bought_item == "Purple Potion":
+                            rem -= 75
+                            player_has_purple_magic = True
+                        elif bought_item == "Rainbow Potion":
+                            rem -= 100
+                            player_has_rainbow_dance = True
 
-                        # Press E to trigger departure audio and exit sequence
                         if keys[pygame.K_e]:
                             exiting_merchant = True
                             exit_timer = pygame.time.get_ticks()
-                            checkpoint = 2  # SAVE CHECKPOINT FOR LEVEL 2
                             try:
                                 departure_fx.play()
                             except NameError:
                                 pass
 
-                    # Wait for departure sound to finish before loading Level 2
                     if exiting_merchant:
-                        if pygame.time.get_ticks() - exit_timer > 8000:  # ~8 seconds delay for voice line
-                            current_state = "LEVEL_2"
-                            current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
+                        if pygame.time.get_ticks() - exit_timer > 8000:
+                            # Level Transition Logic
+                            if last_completed_level == "LEVEL_1":
+                                current_state = "LEVEL_2"
+                                current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
+                                checkpoint = 2
+                            elif last_completed_level == "LEVEL_2":
+                                current_state = "LEVEL_3"
+                                current_level = Level_03(SCREEN_WIDTH, SCREEN_HEIGHT)
+                                checkpoint = 3
+                            elif last_completed_level == "LEVEL_3":
+                                # Assuming there is no Level 4 yet, drop back to 1
+                                current_state = "LEVEL_1"
+                                current_level = Level_01(SCREEN_WIDTH, SCREEN_HEIGHT)
+                                checkpoint = 1
+
                             succi.x = 400.0
                             camera_x = 0.0
                             exiting_merchant = False
+                            merchant_npc = None
+                            merchant_ui = None
 
-                            # Load and play Level 2 Music Track ONCE upon entry
-                            pygame.mixer.music.load("mats/Toccata and Fugue in Dm, BWV 565.mp3")
+                            if current_state in ["LEVEL_2", "LEVEL_3"]:
+                                pygame.mixer.music.load("mats/Toccata and Fugue in Dm, BWV 565.mp3")
+                            else:
+                                pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")
+
                             pygame.mixer.music.set_volume(0.2)
                             pygame.mixer.music.play(-1, 0.0)
 
@@ -289,7 +349,7 @@ while run:
     # DRAWING PHASE
     # ==========================================
     if not game_over:
-        if current_state == "LEVEL_1" or current_state == "LEVEL_2":
+        if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
             current_level.draw(screen, camera_x)
             succi_blit_x, succi_blit_y = succi.draw(screen, camera_x)
 
@@ -297,7 +357,6 @@ while run:
                 if -200 < (px := proj.rect.x - camera_x) < SCREEN_WIDTH + 200: screen.blit(proj.image,
                                                                                            (px, proj.rect.y))
 
-            # Dynamically select which enemies to check for collisions based on level
             enemy_groups_to_check = [current_level.enemy_group]
             if current_state == "LEVEL_1":
                 enemy_groups_to_check.extend([current_level.demon_group, current_level.skeleton_group])
@@ -305,7 +364,6 @@ while run:
                 enemy_groups_to_check.extend(
                     [current_level.helldog_group, current_level.mau_group, current_level.pkgrim_group])
 
-            # Process Player taking damage
             for group in enemy_groups_to_check:
                 for target in group:
                     tx = target.rect.x - camera_x
@@ -319,50 +377,25 @@ while run:
                                 except NameError:
                                     pass
 
-            # Process Projectile hitting enemies
-            for proj in projectile_group:
-                if proj.state == "fly":
-                    for group in enemy_groups_to_check:
-                        for target in group:
-                            ty = target.rect.top if hasattr(target, 'state') else target.rect.y
-                            if proj.mask.overlap(target.mask, (target.rect.x - proj.rect.x, ty - proj.rect.y)):
-                                proj.explode()
+            current_bg_index = int(succi.x // current_level.bg_w)
+            if current_bg_index >= current_level.max_backgrounds - 1:
+                if keys[pygame.K_e]:
+                    last_completed_level = current_state
+                    is_level_2_merchant = (current_state in ["LEVEL_2", "LEVEL_3"])
+                    current_state = "MERCHANT"
+                    pygame.mixer.music.stop()
 
-                                # If the enemy has the 2-shot health system (Lvl 2)
-                                if hasattr(target, 'take_damage'):
-                                    died = target.take_damage()
-                                    if died:
-                                        rem += target.rem_value
-                                        target.kill()
-                                else:
-                                    # 1-shot kill (Lvl 1 enemies and Flyers)
-                                    rem += target.rem_value
-                                    target.kill()
+                    if is_level_2_merchant:
+                        merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT, "spritsheets/merchant_lvl2_sheet.png",
+                                                columns=10, rows=7, target_duration=12200)
+                    else:
+                        merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT, "spritsheets/merchant_lvl1_sheet.png",
+                                                columns=10, rows=6)
 
-                                try:
-                                    explode_fx.play()
-                                except NameError:
-                                    pass
-                                break
-                        if proj.state != "fly": break
-
-            # E Key door entry warped to work in BOTH Level 1 and Level 2
-            if current_state == "LEVEL_1" or current_state == "LEVEL_2":
-                current_bg_index = int(succi.x // current_level.bg_w)
-                if current_bg_index >= current_level.max_backgrounds - 1:
-                    if keys[pygame.K_e]:
-                        current_state = "MERCHANT"
-                        pygame.mixer.music.stop()
-
-                        if merchant_npc is None:
-                            merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT, "spritsheets/merchant_SS.png",
-                                                    columns=7, rows=4)
-                            merchant_ui = Merchant_UI(SCREEN_WIDTH, SCREEN_HEIGHT)
-
-                        succi.x = 400.0
+                    merchant_ui = Merchant_UI(SCREEN_WIDTH, SCREEN_HEIGHT, global_merchant_sold_out)
+                    succi.x = 400.0
 
         elif current_state == "MERCHANT":
-            # ... rest of merchant drawing code stays the same
             if merchant_npc and merchant_npc.state == "intro":
                 merchant_npc.draw(screen)
             elif merchant_npc and merchant_npc.state == "idle" and merchant_ui:
@@ -382,14 +415,6 @@ while run:
             draw_text("GAME PAUSED", font_big, Color("turquoise1"), SCREEN_WIDTH // 2 - 180, SCREEN_HEIGHT // 2 - 50)
             draw_text("Press 'P' or 'ESC' to Resume", font_small, LIGHT_GRAY, SCREEN_WIDTH // 2 - 140,
                       SCREEN_HEIGHT // 2 + 20)
-            ctrl_x = SCREEN_WIDTH - 280
-            draw_text("CONTROLS:", font_small, PINK, ctrl_x, 50)
-            draw_text("Arrow Keys : Move / Duck", font_small, Color("blue1"), ctrl_x, 80)
-            draw_text("Shift      : Run", font_small, Color("blue1"), ctrl_x, 105)
-            draw_text("Space      : Jump", font_small, Color("blue1"), ctrl_x, 130)
-            draw_text("F Key      : Cast Fireball", font_small, Color("blue1"), ctrl_x, 155)
-            draw_text("E Key      : Enter/Exit", font_small, Color("blue1"), ctrl_x, 155)
-            draw_text("P / ESC    : Pause", font_small, PINK, ctrl_x, 180)
 
     else:
         screen.blit(end_image, (0, 0))
@@ -399,8 +424,10 @@ while run:
         draw_text(f"SCORE: {score}", font_big, Color("turquoise1"), SCREEN_WIDTH // 2 - 150, 320)
         pygame.draw.line(screen, Color("plum1"), (350, 400), ((SCREEN_WIDTH // 2 + 330, 400)), 6)
 
-        # CHOICE ON DEATH: Press SPACE for Checkpoint (Level 2), Press '1' to drop back to Level 1
-        if checkpoint == 2:
+        if checkpoint == 3:
+            draw_text("PRESS SPACE TO RETRY LEVEL 3", font_small, Color("blue1"), SCREEN_WIDTH // 2 - 160, 410)
+            draw_text("PRESS '1' TO RESTART AT LEVEL 1", font_small, Color("turquoise1"), SCREEN_WIDTH // 2 - 165, 435)
+        elif checkpoint == 2:
             draw_text("PRESS SPACE TO RETRY LEVEL 2", font_small, Color("blue1"), SCREEN_WIDTH // 2 - 160, 410)
             draw_text("PRESS '1' TO RESTART AT LEVEL 1", font_small, Color("turquoise1"), SCREEN_WIDTH // 2 - 165, 435)
         else:
@@ -412,31 +439,33 @@ while run:
             high_score = score
             with open("score.txt", "w") as file: file.write(str(high_score))
 
-        # Handle Death Restart Input Choices
         restart_action = None
         if pygame.key.get_pressed()[pygame.K_SPACE]:
             restart_action = checkpoint
-        elif checkpoint == 2 and pygame.key.get_pressed()[pygame.K_1]:
+        elif checkpoint in [2, 3] and pygame.key.get_pressed()[pygame.K_1]:
             restart_action = 1
-            checkpoint = 1  # Reset checkpoint back to Level 1
+            checkpoint = 1
 
         if restart_action is not None:
             game_over, paused, camera_x, rem = False, False, 0.0, 0
 
             old_max_health = succi.max_health if hasattr(succi, 'max_health') else 1
 
-            if restart_action == 2:
+            if restart_action == 3:
+                current_state = "LEVEL_3"
+                current_level = Level_03(SCREEN_WIDTH, SCREEN_HEIGHT)
+            elif restart_action == 2:
                 current_state = "LEVEL_2"
                 current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
-                # <--- REMOVED music load/play here so it keeps playing continuously!
             else:
+                if current_state != "LEVEL_1":
+                    pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")
+                    pygame.mixer.music.set_volume(0.2)
+                    pygame.mixer.music.play(-1, 0.0)
+
                 current_state = "LEVEL_1"
                 current_level = Level_01(SCREEN_WIDTH, SCREEN_HEIGHT)
-                old_max_health = 1  # Reset health if dropping back to level 1
-                # If they dropped back to Level 1 from Level 2, reload the Level 1 track:
-                pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")
-                pygame.mixer.music.set_volume(0.2)
-                pygame.mixer.music.play(-1, 0.0)
+                old_max_health = 1
 
             current_level.reset()
             merchant_npc = None
@@ -448,7 +477,6 @@ while run:
             succi.health = old_max_health
             projectile_group.empty()
 
-            # Fallback safety check for music continuity
             if not pygame.mixer.music.get_busy():
                 pygame.mixer.music.play(-1, 0.0)
 
