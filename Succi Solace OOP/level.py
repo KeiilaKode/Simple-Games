@@ -1,7 +1,7 @@
 # --- level.py ---#
 import pygame
 import random
-from entities import Enemy, Demon, Skeleton, Platform, Helldog, Mau, Pkgrim
+from entities import Enemy, Demon, Skeleton, Platform, Helldog, Mau, Pkgrim, Azule, Titus
 
 
 def trim_black_side_borders(surface, threshold=15):
@@ -407,11 +407,12 @@ class Level_03(Level_01):
         self.floor_y_offset = 0
         super().__init__(screen_width, screen_height)
 
+        self.azule_group = pygame.sprite.Group()
+        self.titus_group = pygame.sprite.Group()
+
     def load_assets(self):
-        # Explicitly build the background list for castles 1-19
         full_bg_filenames = []
         for i in range(1, 20):
-            # Checking for that uppercase .PNG extension on castle 5
             if i == 5:
                 full_bg_filenames.append("backgrounds/lvl_3_bgs/castle5.PNG")
             else:
@@ -426,9 +427,7 @@ class Level_03(Level_01):
                                                      (self.bg_w, self.screen_height)) for f in full_bg_filenames]
         self.max_backgrounds = len(full_bg_filenames)
 
-        # Load the Level 3 floor
         floor_img = pygame.image.load("mats/platforms/lvl3_floor.png").convert_alpha()
-
         self.target_floor_h = 200
         floor_scale_ratio = self.target_floor_h / floor_img.get_height()
         self.floor_w = int(floor_img.get_width() * floor_scale_ratio) - 1
@@ -437,21 +436,42 @@ class Level_03(Level_01):
 
         self.platform_image = pygame.image.load("mats/plat31c.png").convert_alpha()
 
-        # Re-use Level 2 platforms temporarily
+        # Load custom Level 3 platforms
         try:
-            plat2_raw = pygame.image.load("mats/platforms/lvl2_p2.png").convert_alpha()
-            plat3_raw = pygame.image.load("mats/platforms/lvl2_p3.PNG").convert_alpha()
-            self.platform_images = [trim_transparent_borders(plat2_raw), trim_transparent_borders(plat3_raw)]
+            p1_raw = pygame.image.load("mats/platforms/lvl_3_plat1.png").convert_alpha()
+            p2_raw = pygame.image.load("mats/platforms/lvl_3_plat2.png").convert_alpha()
+            p3_raw = pygame.image.load("mats/platforms/lvl_3_plat3.png").convert_alpha()
+
+            self.platform_images = [
+                trim_transparent_borders(p1_raw),
+                trim_transparent_borders(p2_raw),
+                trim_transparent_borders(p3_raw)
+            ]
         except pygame.error as e:
             print(f"Error loading Level 3 platforms: {e}")
             self.platform_images = [self.platform_image]
 
         self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
 
+        # Load Azule's frames
+        enemy_scale = 0.55
+        self.azule_walk_r, self.azule_walk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/azule_walk_ss.png", 8, enemy_scale)
+        self.azule_atk_r, self.azule_atk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/azule_attack_ss.png", 12, enemy_scale)
+
+        # Load Titus's frames
+        titus_scale = 0.60
+        self.titus_walk_r, self.titus_walk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/titus_walk_ss.png", 8, titus_scale)
+        self.titus_atk_r, self.titus_atk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/titus_attack_ss.png", 16, titus_scale)
+
+    def reset(self):
+        super().reset()
+        self.azule_group.empty()
+        self.titus_group.empty()
+
     def update(self, dt, camera_x, player_x, player_y):
-        # Override update to completely ignore ground spawns
         for platform in list(self.platform_group):
-            if platform.rect.right < camera_x - 4000: platform.kill()
+            if platform.rect.right < camera_x - 4000:
+                platform.kill()
 
         if camera_x + self.screen_width < self.level_end_x - 500:
             if len(self.platform_group) < 40:
@@ -468,8 +488,33 @@ class Level_03(Level_01):
                 self.enemy_group.add(Enemy(ex, random.randint(200, 550), self.bird_sheet_img, .15,
                                            forced_direction=1 if side == "left" else -1))
 
+        current_bg_index = int(player_x // self.bg_w)
+
+        # Alternate Spawning between Azule and Titus
+        if current_bg_index > self.last_spawned_bg_index and current_bg_index < self.max_backgrounds - 1:
+            t_bg = current_bg_index + 1
+            p_start, p_end = t_bg * self.bg_w, (t_bg + 1) * self.bg_w - 100
+
+            if t_bg % 2 == 0:
+                self.azule_group.add(
+                    Azule(p_start + 100, self.y_ground, p_start, p_end, self.azule_walk_r, self.azule_walk_l, self.azule_atk_r, self.azule_atk_l)
+                )
+            else:
+                self.titus_group.add(
+                    Titus(p_start + 100, self.y_ground, p_start, p_end, self.titus_walk_r, self.titus_walk_l, self.titus_atk_r, self.titus_atk_l)
+                )
+
+            self.last_spawned_bg_index = current_bg_index
+
         self.enemy_group.update(camera_x, self.screen_width)
+        self.azule_group.update(camera_x, player_x, player_y)
+        self.titus_group.update(camera_x, player_x, player_y)
 
     def draw(self, screen, camera_x):
-        # Base class draw will cleanly handle bg, floors, platforms, and our flyers
         super().draw(screen, camera_x)
+        for enemy in self.azule_group:
+            if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
+                screen.blit(enemy.image, (x, enemy.rect.top))
+        for enemy in self.titus_group:
+            if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
+                screen.blit(enemy.image, (x, enemy.rect.top))

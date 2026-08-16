@@ -252,6 +252,8 @@ while run:
                     elif current_state == "LEVEL_2":
                         enemy_targets.extend(
                             [current_level.helldog_group, current_level.mau_group, current_level.pkgrim_group])
+                    elif current_state == "LEVEL_3":
+                        enemy_targets.extend([current_level.azule_group, current_level.titus_group])
 
                     for group in enemy_targets:
                         for target in group:
@@ -363,6 +365,8 @@ while run:
             elif current_state == "LEVEL_2":
                 enemy_groups_to_check.extend(
                     [current_level.helldog_group, current_level.mau_group, current_level.pkgrim_group])
+            elif current_state == "LEVEL_3":
+                enemy_groups_to_check.extend([current_level.azule_group, current_level.titus_group])
 
             for group in enemy_groups_to_check:
                 for target in group:
@@ -412,9 +416,19 @@ while run:
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 180))
             screen.blit(overlay, (0, 0))
+
             draw_text("GAME PAUSED", font_big, Color("turquoise1"), SCREEN_WIDTH // 2 - 180, SCREEN_HEIGHT // 2 - 50)
             draw_text("Press 'P' or 'ESC' to Resume", font_small, LIGHT_GRAY, SCREEN_WIDTH // 2 - 140,
                       SCREEN_HEIGHT // 2 + 20)
+
+            ctrl_x = SCREEN_WIDTH - 280
+            draw_text("CONTROLS:", font_small, PINK, ctrl_x, 50)
+            draw_text("Arrow Keys : Move / Duck", font_small, Color("blue1"), ctrl_x, 80)
+            draw_text("Shift           : Run", font_small, Color("blue1"), ctrl_x, 105)
+            draw_text("Space         : Jump", font_small, Color("blue1"), ctrl_x, 130)
+            draw_text("F Key          : Cast Fireball", font_small, Color("blue1"), ctrl_x, 155)
+            draw_text("E Key          : Enter/Exit", font_small, Color("blue1"), ctrl_x, 180)
+            draw_text("P / ESC       : Pause", font_small, PINK, ctrl_x, 205)
 
     else:
         screen.blit(end_image, (0, 0))

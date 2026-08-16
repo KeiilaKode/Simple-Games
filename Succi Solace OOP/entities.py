@@ -565,3 +565,111 @@ class Pkgrim(pygame.sprite.Sprite):
         self.rect.bottom = old_bottom
         self.mask = pygame.mask.from_surface(self.image)
         if self.rect.right < camera_x - 1000: self.kill()
+
+class Azule(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
+        super().__init__()
+        self.health = 3
+        self.rem_value = 12
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 90
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 2.2, 1, "walk"
+        self.image = self.walk_frames_right[0]
+
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 150:
+            if abs(player_x - self.rect.centerx) < 190 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x:
+                self.rect.x, self.direction = self.patrol_end_x, -1
+            elif self.rect.x <= self.patrol_start_x:
+                self.rect.x, self.direction = self.patrol_start_x, 1
+            if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[self.frame_index]
+
+        elif self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 70:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index += 1
+                if self.frame_index >= len(self.attack_frames_right):
+                    self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+        self.mask = pygame.mask.from_surface(self.image)
+        if self.rect.right < camera_x - 1000:
+            self.kill()
+
+class Titus(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
+        super().__init__()
+        # Heavier health and REM for the big knight
+        self.health = 4
+        self.rem_value = 15
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 100
+        # Slower speed (1.8) to give him a heavy, lumbering feel
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 1.8, 1, "walk"
+        self.image = self.walk_frames_right[0]
+
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 150:
+            if abs(player_x - self.rect.centerx) < 220 and self.state != "attack": # Slightly wider attack range for the huge sword
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x:
+                self.rect.x, self.direction = self.patrol_end_x, -1
+            elif self.rect.x <= self.patrol_start_x:
+                self.rect.x, self.direction = self.patrol_start_x, 1
+            if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[self.frame_index]
+
+        elif self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 70:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index += 1
+                if self.frame_index >= len(self.attack_frames_right):
+                    self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+        self.mask = pygame.mask.from_surface(self.image)
+        if self.rect.right < camera_x - 1000:
+            self.kill()
