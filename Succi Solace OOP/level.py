@@ -1,7 +1,7 @@
 # --- level.py ---#
 import pygame
 import random
-from entities import Enemy, Demon, Skeleton, Platform, Helldog, Mau, Pkgrim, Azule, Titus
+from entities import Enemy, Demon, Skeleton, Platform, Helldog, Mau, Pkgrim, Azule, Titus, Lionel, Demented
 
 
 def trim_black_side_borders(surface, threshold=15):
@@ -114,7 +114,7 @@ class Level_01:
         self.load_assets()
 
         self.level_end_x = self.max_backgrounds * self.bg_w
-        self.door_world_x = ((self.max_backgrounds - 1) * self.bg_w) + 900
+        self.door_world_x = self.level_end_x - 200
 
         if not hasattr(self, 'platform_images') or not self.platform_images:
             self.platform_images = [self.platform_image]
@@ -202,14 +202,26 @@ class Level_01:
             t_bg = current_bg_index + 1
             p_start, p_end = t_bg * self.bg_w, (t_bg + 1) * self.bg_w - 100
 
-            if t_bg % 3 == 0:
-                self.demon_group.add(
-                    Demon(p_start + 100, self.y_ground, p_start, p_end, self.demon_walk_r, self.demon_walk_l,
-                          self.demon_attack_r, self.demon_attack_l))
-            else:
-                self.skeleton_group.add(
-                    Skeleton(p_start + 100, self.y_ground, p_start, p_end, self.skel_walk_r, self.skel_walk_l,
-                             self.skel_idle_r, self.skel_idle_l, self.skel_attack_r, self.skel_attack_l))
+            # NEW LOGIC: Spawn 2 to 3 enemies per background panel
+            num_enemies = random.randint(2, 3)
+            segment_width = (p_end - p_start) // num_enemies
+
+            for i in range(num_enemies):
+                e_start = p_start + (i * segment_width)
+                e_end = e_start + segment_width
+
+                # Pick a random spot within this chunk of the background
+                spawn_x = random.randint(e_start + 50, e_end - 50)
+
+                # Randomly spawn a Demon (33% chance) or Skeleton (66% chance)
+                if random.randint(1, 3) == 1:
+                    self.demon_group.add(
+                        Demon(spawn_x, self.y_ground, e_start, e_end, self.demon_walk_r, self.demon_walk_l,
+                              self.demon_attack_r, self.demon_attack_l))
+                else:
+                    self.skeleton_group.add(
+                        Skeleton(spawn_x, self.y_ground, e_start, e_end, self.skel_walk_r, self.skel_walk_l,
+                                 self.skel_idle_r, self.skel_idle_l, self.skel_attack_r, self.skel_attack_l))
 
             self.last_spawned_bg_index = current_bg_index
 
@@ -409,6 +421,8 @@ class Level_03(Level_01):
 
         self.azule_group = pygame.sprite.Group()
         self.titus_group = pygame.sprite.Group()
+        self.lionel_group = pygame.sprite.Group()
+        self.demented_group = pygame.sprite.Group()
 
     def load_assets(self):
         full_bg_filenames = []
@@ -455,18 +469,40 @@ class Level_03(Level_01):
 
         # Load Azule's frames
         enemy_scale = 0.55
-        self.azule_walk_r, self.azule_walk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/azule_walk_ss.png", 8, enemy_scale)
-        self.azule_atk_r, self.azule_atk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/azule_attack_ss.png", 12, enemy_scale)
+        self.azule_walk_r, self.azule_walk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/azule_walk_ss.png",
+                                                                 8, enemy_scale)
+        self.azule_atk_r, self.azule_atk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/azule_attack_ss.png",
+                                                               12, enemy_scale)
 
         # Load Titus's frames
         titus_scale = 0.60
-        self.titus_walk_r, self.titus_walk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/titus_walk_ss.png", 8, titus_scale)
-        self.titus_atk_r, self.titus_atk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/titus_attack_ss.png", 16, titus_scale)
+        self.titus_walk_r, self.titus_walk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/titus_walk_ss.png",
+                                                                 8, titus_scale)
+        self.titus_atk_r, self.titus_atk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/titus_attack_ss.png",
+                                                               16, titus_scale)
+
+        # Load Lionel's frames
+        lionel_scale = 0.55
+        self.lionel_walk_r, self.lionel_walk_l = load_enemy_frames(
+            "spritsheets/enemies/lvl_3_enemies/lionel_walk_ss.png", 8, lionel_scale)
+        self.lionel_atk_r, self.lionel_atk_l = load_enemy_frames(
+            "spritsheets/enemies/lvl_3_enemies/lionel_attack_ss.png", 9, lionel_scale)
+
+        # Load Demented's frames
+        demented_scale = 0.55
+        self.dem_walk_r, self.dem_walk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/demented_walk_ss.png",
+                                                             8, demented_scale)
+        self.dem_idle_r, self.dem_idle_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/demented_idle_ss.png",
+                                                             9, demented_scale)
+        self.dem_atk_r, self.dem_atk_l = load_enemy_frames("spritsheets/enemies/lvl_3_enemies/demented_attack_ss.png",
+                                                           10, demented_scale)
 
     def reset(self):
         super().reset()
         self.azule_group.empty()
         self.titus_group.empty()
+        self.lionel_group.empty()
+        self.demented_group.empty()
 
     def update(self, dt, camera_x, player_x, player_y):
         for platform in list(self.platform_group):
@@ -490,18 +526,32 @@ class Level_03(Level_01):
 
         current_bg_index = int(player_x // self.bg_w)
 
-        # Alternate Spawning between Azule and Titus
+        # Alternate Spawning between Azule, Titus, Lionel, and Demented
         if current_bg_index > self.last_spawned_bg_index and current_bg_index < self.max_backgrounds - 1:
             t_bg = current_bg_index + 1
             p_start, p_end = t_bg * self.bg_w, (t_bg + 1) * self.bg_w - 100
 
-            if t_bg % 2 == 0:
+            spawn_type = t_bg % 4
+
+            if spawn_type == 0:
                 self.azule_group.add(
-                    Azule(p_start + 100, self.y_ground, p_start, p_end, self.azule_walk_r, self.azule_walk_l, self.azule_atk_r, self.azule_atk_l)
+                    Azule(p_start + 100, self.y_ground, p_start, p_end, self.azule_walk_r, self.azule_walk_l,
+                          self.azule_atk_r, self.azule_atk_l)
+                )
+            elif spawn_type == 1:
+                self.titus_group.add(
+                    Titus(p_start + 100, self.y_ground, p_start, p_end, self.titus_walk_r, self.titus_walk_l,
+                          self.titus_atk_r, self.titus_atk_l)
+                )
+            elif spawn_type == 2:
+                self.lionel_group.add(
+                    Lionel(p_start + 100, self.y_ground, p_start, p_end, self.lionel_walk_r, self.lionel_walk_l,
+                           self.lionel_atk_r, self.lionel_atk_l)
                 )
             else:
-                self.titus_group.add(
-                    Titus(p_start + 100, self.y_ground, p_start, p_end, self.titus_walk_r, self.titus_walk_l, self.titus_atk_r, self.titus_atk_l)
+                self.demented_group.add(
+                    Demented(p_start + 100, self.y_ground, p_start, p_end, self.dem_walk_r, self.dem_walk_l,
+                             self.dem_idle_r, self.dem_idle_l, self.dem_atk_r, self.dem_atk_l)
                 )
 
             self.last_spawned_bg_index = current_bg_index
@@ -509,6 +559,8 @@ class Level_03(Level_01):
         self.enemy_group.update(camera_x, self.screen_width)
         self.azule_group.update(camera_x, player_x, player_y)
         self.titus_group.update(camera_x, player_x, player_y)
+        self.lionel_group.update(camera_x, player_x, player_y)
+        self.demented_group.update(camera_x, player_x, player_y)
 
     def draw(self, screen, camera_x):
         super().draw(screen, camera_x)
@@ -516,5 +568,11 @@ class Level_03(Level_01):
             if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
                 screen.blit(enemy.image, (x, enemy.rect.top))
         for enemy in self.titus_group:
+            if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
+                screen.blit(enemy.image, (x, enemy.rect.top))
+        for enemy in self.lionel_group:
+            if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
+                screen.blit(enemy.image, (x, enemy.rect.top))
+        for enemy in self.demented_group:
             if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
                 screen.blit(enemy.image, (x, enemy.rect.top))

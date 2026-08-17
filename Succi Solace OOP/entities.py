@@ -43,7 +43,12 @@ class Enemy(pygame.sprite.Sprite):
             self.update_time = pygame.time.get_ticks()
             self.frame_index = (self.frame_index + 1) % len(self.animation_list)
         self.image = self.animation_list[self.frame_index]
-        self.mask = pygame.mask.from_surface(self.image)
+
+        # --- PERFORMANCE FIX: Only generate mask if animation frame changed ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
         self.rect.x += self.direction * 4
         if self.rect.right < camera_x - 400 or self.rect.left > camera_x + screen_width + 400:
             self.kill()
@@ -63,8 +68,8 @@ class Demon(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, camera_x, player_x=None, player_y=None):
-        if player_x and player_y and abs(player_y - self.rect.centery) < 150:
-            if abs(player_x - self.rect.centerx) < 180 and self.state != "attack":
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
                 self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
                 self.direction = 1 if player_x > self.rect.centerx else -1
 
@@ -92,7 +97,12 @@ class Demon(pygame.sprite.Sprite):
         old_bottom = self.rect.bottom
         self.rect = self.image.get_rect(center=self.rect.center)
         self.rect.bottom = old_bottom
-        self.mask = pygame.mask.from_surface(self.image)
+
+        # --- PERFORMANCE FIX: Only generate mask if animation frame changed ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
         if self.rect.right < camera_x - 1000: self.kill()
 
 
@@ -112,8 +122,8 @@ class Skeleton(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, camera_x, player_x=None, player_y=None):
-        if player_x and player_y and abs(player_y - self.rect.centery) < 250:
-            if abs(player_x - self.rect.centerx) < 180 and self.state != "attack":
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
                 self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
                 self.direction = 1 if player_x > self.rect.centerx else -1
 
@@ -147,7 +157,12 @@ class Skeleton(pygame.sprite.Sprite):
         old_bottom = self.rect.bottom
         self.rect = self.image.get_rect(center=self.rect.center)
         self.rect.bottom = old_bottom
-        self.mask = pygame.mask.from_surface(self.image)
+
+        # --- PERFORMANCE FIX: Only generate mask if animation frame changed ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
         if self.rect.right < camera_x - 1000: self.kill()
 
 
@@ -183,7 +198,12 @@ class Projectile(pygame.sprite.Sprite):
 
         if self.state == "fly":
             self.rect.x += self.direction * self.speed * dt
-            self.mask = pygame.mask.from_surface(self.image)
+
+            # --- PERFORMANCE FIX ---
+            if getattr(self, "last_image", None) != self.image:
+                self.mask = pygame.mask.from_surface(self.image)
+                self.last_image = self.image
+
             if self.rect.right < camera_x - 500 or self.rect.left > camera_x + screen_width + 500:
                 self.kill()
 
@@ -196,15 +216,10 @@ class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, platform_image, offset_ratio=0.0):
         super().__init__()
         orig_w, orig_h = platform_image.get_size()
-
-        # Scale proportionally to preserve the chunky 3D floating island look
         scale = width / orig_w
         height = int(orig_h * scale)
-
         self.image = pygame.transform.smoothscale(platform_image, (width, height))
         self.rect = self.image.get_rect(topleft=(x, y))
-
-        # Only apply a vertical offset if specified (e.g. for Level 2 3D islands)
         top_offset = int(height * offset_ratio)
         self.collision_rect = pygame.Rect(self.rect.x, self.rect.y + top_offset, self.rect.width, 10)
 
@@ -238,12 +253,8 @@ class Merchant(pygame.sprite.Sprite):
 
         self.frame_index = 0
         self.animation_timer = 0
-
-        # Automatically fit the total animation duration to ~10 seconds (10000 ms)
-        # based on however many frames are in the sheet!
         self.anim_speed = max(20, int(target_duration / len(self.intro_frames)))
         self.state = "intro"
-
         self.image = self.intro_frames[0]
         self.rect = self.image.get_rect(center=(screen_width // 2, screen_height // 2))
         self.audio_played = False
@@ -269,6 +280,9 @@ class Merchant(pygame.sprite.Sprite):
         screen.blit(self.image, self.rect.topleft)
 
 
+import pygame
+
+
 class Merchant_UI:
     def __init__(self, screen_width, screen_height, sold_out_ref):
         try:
@@ -276,134 +290,204 @@ class Merchant_UI:
             raw_bg = pygame.image.load("backgrounds/M_inventory_empty.png").convert()
             self.bg = pygame.transform.smoothscale(raw_bg, (screen_width, screen_height))
 
+            # --- ORIGINAL POTIONS ---
             self.health_p = pygame.transform.smoothscale(pygame.image.load("mats/health_p.png").convert_alpha(),
                                                          (110, 150))
             self.mana_p = pygame.transform.smoothscale(pygame.image.load("mats/mana_p.png").convert_alpha(), (110, 150))
             self.purple_p = pygame.transform.smoothscale(pygame.image.load("mats/purple_p.png").convert_alpha(),
                                                          (110, 150))
-            # --- NEW RAINBOW POTION LOADER ---
             self.rainbow_p = pygame.transform.smoothscale(pygame.image.load("mats/secret_potion.png").convert_alpha(),
                                                           (110, 150))
 
             wings_raw = pygame.image.load("mats/wings_p_ss.png").convert_alpha()
             ww, wh = wings_raw.get_size()
-            crop_h = int(wh * 0.70)
-            y_offset = int(wh * 0.15)
-            wings_cropped = wings_raw.subsurface((0, y_offset, ww, crop_h))
-            self.wings_p = pygame.transform.smoothscale(wings_cropped, (110, 150))
+            self.wings_p = pygame.transform.smoothscale(wings_raw.subsurface((0, int(wh * 0.15), ww, int(wh * 0.70))),
+                                                        (110, 150))
+
+            # --- NEW POTIONS ---
+            self.teal_p = pygame.transform.smoothscale(pygame.image.load("mats/teal potion.png").convert_alpha(),
+                                                       (110, 150))
+            self.emerald_p = pygame.transform.smoothscale(pygame.image.load("mats/emerald_hup.png").convert_alpha(),
+                                                          (110, 150))
+            self.pink_p = pygame.transform.smoothscale(pygame.image.load("mats/pink potion.png").convert_alpha(),
+                                                       (110, 150))
+            self.mysterious_p = pygame.transform.smoothscale(
+                pygame.image.load("mats/mysterious potion.png").convert_alpha(), (110, 150))
+            self.silver_p = pygame.transform.smoothscale(pygame.image.load("mats/silver potion.png").convert_alpha(),
+                                                         (110, 150))
+            self.royal_p = pygame.transform.smoothscale(pygame.image.load("mats/royal potion.png").convert_alpha(),
+                                                        (110, 150))
+            self.gold_p = pygame.transform.smoothscale(pygame.image.load("mats/gold potion.png").convert_alpha(),
+                                                       (110, 150))
+
+            # --- LOAD & SCALE ARROWS ---
+            raw_left = pygame.image.load("mats/left.png").convert_alpha()
+            raw_right = pygame.image.load("mats/right.png").convert_alpha()
+
+            # Base size: larger and correctly proportioned
+            arrow_w, arrow_h = 245, 120  # 220, 95
+            self.left_arrow_img = pygame.transform.smoothscale(raw_left, (arrow_w, arrow_h))
+            self.right_arrow_img = pygame.transform.smoothscale(raw_right, (arrow_w, arrow_h))
+
+            # Hover size: 10% larger
+            hover_w, hover_h = int(arrow_w * 1.10), int(arrow_h * 1.10)
+            self.left_arrow_hover = pygame.transform.smoothscale(raw_left, (hover_w, hover_h))
+            self.right_arrow_hover = pygame.transform.smoothscale(raw_right, (hover_w, hover_h))
 
         except pygame.error as e:
             print(f"Error loading UI: {e}")
+            import sys;
             sys.exit()
 
-        self.slot_1_rect = pygame.Rect(680, 165, 130, 130)
-        self.slot_2_rect = pygame.Rect(890, 165, 130, 130)
-        self.slot_3_rect = pygame.Rect(1100, 165, 130, 130)
-        self.slot_4_rect = pygame.Rect(680, 360, 130, 130)
-        # ---> THIS IS THE SLOT RIGHT UNDER THE BLUE POTION (Middle Column, Second Row) <---
-        self.slot_5_rect = pygame.Rect(890, 360, 130, 130)
+        # The 9 static UI slots on the background image
+        self.grid_rects = [
+            pygame.Rect(680, 165, 130, 130), pygame.Rect(890, 165, 130, 130), pygame.Rect(1100, 165, 130, 130),
+            pygame.Rect(680, 360, 130, 130), pygame.Rect(890, 360, 130, 130), pygame.Rect(1100, 360, 130, 130),
+            pygame.Rect(680, 555, 130, 130), pygame.Rect(890, 555, 130, 130), pygame.Rect(1100, 555, 130, 130)
+        ]
 
-        self.buy_rect = pygame.Rect(250, 650, 240, 65)
+        self.buy_rect = pygame.Rect(270, 650, 210, 65)
 
-        self.selected_item = None
+        # Position base hitboxes beside the BUY button
+        self.left_arrow_rect = self.left_arrow_img.get_rect(midright=(self.buy_rect.left - 15, self.buy_rect.centery))
+        self.right_arrow_rect = self.right_arrow_img.get_rect(midleft=(self.buy_rect.right + 15, self.buy_rect.centery))
+
+        # --- MASTER INVENTORY LIST ---
+        self.inventory = [
+            # Page 1
+            {"id": "Health Potion", "img": self.health_p, "title": "Base Health", "desc": ["Unlocks 3 Max Health."],
+             "cost": 50, "color": (50, 255, 50)},
+            {"id": "Teal Potion", "img": self.teal_p, "title": "Minor Heal", "desc": ["Restores up to 3 Health."],
+             "cost": 50, "color": (50, 200, 255)},
+            {"id": "Emerald Potion", "img": self.emerald_p, "title": "Advanced Health", "desc": ["Adds +2 Max Health."],
+             "cost": 150, "color": (100, 255, 100)},
+            {"id": "Pink Potion", "img": self.pink_p, "title": "Major Heal", "desc": ["Restores up to 5 Health."],
+             "cost": 100, "color": (255, 100, 200)},
+            {"id": "Mysterious Potion", "img": self.mysterious_p, "title": "Mysterious Potion",
+             "desc": ["Unlocks Double Jump."], "cost": 200, "color": (150, 50, 255)},
+            {"id": "Silver Potion", "img": self.silver_p, "title": "Silver Potion", "desc": ["Unlocks Melee Attack."],
+             "cost": 150, "color": (220, 220, 220)},
+            {"id": "Wings Potion", "img": self.wings_p, "title": "Wings Potion",
+             "desc": ["Unlocks the ability to Fly."], "cost": 200, "color": (255, 200, 50)},
+            {"id": "Purple Potion", "img": self.purple_p, "title": "Purple Potion",
+             "desc": ["Unlocks Purple Fireball."], "cost": 100, "color": (180, 50, 255)},
+            {"id": "Mana Potion", "img": self.mana_p, "title": "Mana Potion", "desc": ["Magic mysteries await..."],
+             "cost": 75, "color": (50, 50, 255)},
+
+            # Page 2
+            {"id": "Rainbow Potion", "img": self.rainbow_p, "title": "Rainbow Potion",
+             "desc": ["Unlocks ultimate secrets."], "cost": 150, "color": (255, 100, 255)},
+            {"id": "Royal Potion", "img": self.royal_p, "title": "Royal Potion", "desc": ["Summons a loyal companion."],
+             "cost": 300, "color": (255, 180, 50)},
+            {"id": "Gold Potion", "img": self.gold_p, "title": "Gold Potion", "desc": ["Adds +1 final Max Health."],
+             "cost": 250, "color": (255, 220, 50)}
+        ]
+
+        self.current_page = 0
+        self.selected_item_data = None
+
         self.font_title = pygame.font.SysFont("Lucida Sans", 36)
         self.font_desc = pygame.font.SysFont("Lucida Sans", 24)
         self.font_rem = pygame.font.SysFont("Lucida Sans", 30)
 
+        self.last_click_time = 0
+
+    @property
+    def max_pages(self):
+        return max(1, (len(self.inventory) + 8) // 9)
+
     def update(self, mouse_pos, mouse_click, rem):
         bought_item = None
+        current_time = pygame.time.get_ticks()
 
-        if self.slot_1_rect.collidepoint(mouse_pos) and not self.sold_out["Health Potion"]:
-            if mouse_click: self.selected_item = "Health Potion"
-        elif self.slot_2_rect.collidepoint(mouse_pos) and not self.sold_out["Mana Potion"]:
-            if mouse_click: self.selected_item = "Mana Potion"
-        elif self.slot_3_rect.collidepoint(mouse_pos) and not self.sold_out["Wings Potion"]:
-            if mouse_click: self.selected_item = "Wings Potion"
-        elif self.slot_4_rect.collidepoint(mouse_pos) and not self.sold_out["Purple Potion"]:
-            if mouse_click: self.selected_item = "Purple Potion"
-        elif self.slot_5_rect.collidepoint(mouse_pos) and not self.sold_out["Rainbow Potion"]:
-            if mouse_click: self.selected_item = "Rainbow Potion"
+        start_idx = self.current_page * 9
+        page_items = self.inventory[start_idx: start_idx + 9]
 
-        # Combined click-away check (only ONE clean block that includes all slots)
-        if mouse_click and not (
-                self.slot_1_rect.collidepoint(mouse_pos) or
-                self.slot_2_rect.collidepoint(mouse_pos) or
-                self.slot_3_rect.collidepoint(mouse_pos) or
-                self.slot_4_rect.collidepoint(mouse_pos) or
-                self.slot_5_rect.collidepoint(mouse_pos) or
-                self.buy_rect.collidepoint(mouse_pos)
-        ):
-            self.selected_item = None
+        if mouse_click and (current_time - self.last_click_time > 200):
+            self.last_click_time = current_time
 
-        if mouse_click and self.buy_rect.collidepoint(mouse_pos):
-            if self.selected_item == "Health Potion" and rem >= 50 and not self.sold_out["Health Potion"]:
-                bought_item = "Health Potion"
-            elif self.selected_item == "Mana Potion" and rem >= 75 and not self.sold_out["Mana Potion"]:
-                bought_item = "Mana Potion"
-            elif self.selected_item == "Wings Potion" and rem >= 150 and not self.sold_out["Wings Potion"]:
-                bought_item = "Wings Potion"
-            elif self.selected_item == "Purple Potion" and rem >= 75 and not self.sold_out["Purple Potion"]:
-                bought_item = "Purple Potion"
-            elif self.selected_item == "Rainbow Potion" and rem >= 100 and not self.sold_out["Rainbow Potion"]:
-                bought_item = "Rainbow Potion"
+            # Check Arrow Clicks
+            if self.right_arrow_rect.collidepoint(mouse_pos) and self.current_page < self.max_pages - 1:
+                self.current_page += 1
+                self.selected_item_data = None
+            elif self.left_arrow_rect.collidepoint(mouse_pos) and self.current_page > 0:
+                self.current_page -= 1
+                self.selected_item_data = None
+
+            # Check Buy Button Click
+            elif self.buy_rect.collidepoint(mouse_pos) and self.selected_item_data:
+                item_id = self.selected_item_data["id"]
+                if rem >= self.selected_item_data["cost"] and not self.sold_out.get(item_id, False):
+                    bought_item = item_id
+
+            # Check Item Slot Clicks
+            else:
+                clicked_on_item = False
+                for i, item in enumerate(page_items):
+                    if self.grid_rects[i].collidepoint(mouse_pos):
+                        if not self.sold_out.get(item["id"], False):
+                            self.selected_item_data = item
+                        clicked_on_item = True
+                        break
+
+                if not clicked_on_item:
+                    self.selected_item_data = None
 
         return bought_item
 
     def draw(self, screen, mouse_pos, rem):
         screen.blit(self.bg, (0, 0))
 
-        if not self.sold_out["Health Potion"]:
-            screen.blit(self.health_p, (self.slot_1_rect.x + 10, self.slot_1_rect.y - 10))
-            if self.slot_1_rect.collidepoint(mouse_pos):
-                pygame.draw.rect(screen, (255, 255, 255), self.slot_1_rect, 3)
+        start_idx = self.current_page * 9
+        page_items = self.inventory[start_idx: start_idx + 9]
 
-        if not self.sold_out["Mana Potion"]:
-            screen.blit(self.mana_p, (self.slot_2_rect.x + 10, self.slot_2_rect.y - 10))
-            if self.slot_2_rect.collidepoint(mouse_pos):
-                pygame.draw.rect(screen, (255, 255, 255), self.slot_2_rect, 3)
+        # Draw Items on Grid
+        for i, item in enumerate(page_items):
+            if not self.sold_out.get(item["id"], False):
+                slot = self.grid_rects[i]
+                screen.blit(item["img"], (slot.x + 10, slot.y - 10))
 
-        if not self.sold_out["Wings Potion"]:
-            screen.blit(self.wings_p, (self.slot_3_rect.x + 10, self.slot_3_rect.y - 10))
-            if self.slot_3_rect.collidepoint(mouse_pos):
-                pygame.draw.rect(screen, (255, 255, 255), self.slot_3_rect, 3)
+                if slot.collidepoint(mouse_pos) or (
+                        self.selected_item_data and self.selected_item_data["id"] == item["id"]):
+                    pygame.draw.rect(screen, (255, 255, 255), slot, 3)
 
-        if not self.sold_out["Purple Potion"]:
-            screen.blit(self.purple_p, (self.slot_4_rect.x + 10, self.slot_4_rect.y - 10))
-            if self.slot_4_rect.collidepoint(mouse_pos):
-                pygame.draw.rect(screen, (255, 255, 255), self.slot_4_rect, 3)
+        # Draw Left Arrow with Hover State
+        if self.current_page > 0:
+            if self.left_arrow_rect.collidepoint(mouse_pos):
+                hover_rect = self.left_arrow_hover.get_rect(center=self.left_arrow_rect.center)
+                screen.blit(self.left_arrow_hover, hover_rect)
+            else:
+                screen.blit(self.left_arrow_img, self.left_arrow_rect)
 
-        # Draw Rainbow Potion if not sold out
-        if not self.sold_out["Rainbow Potion"]:
-            screen.blit(self.rainbow_p, (self.slot_5_rect.x + 10, self.slot_5_rect.y - 10))
-            if self.slot_5_rect.collidepoint(mouse_pos):
-                pygame.draw.rect(screen, (255, 255, 255), self.slot_5_rect, 3)
+        # Draw Right Arrow with Hover State
+        if self.current_page < self.max_pages - 1:
+            if self.right_arrow_rect.collidepoint(mouse_pos):
+                hover_rect = self.right_arrow_hover.get_rect(center=self.right_arrow_rect.center)
+                screen.blit(self.right_arrow_hover, hover_rect)
+            else:
+                screen.blit(self.right_arrow_img, self.right_arrow_rect)
 
+        # Draw Buy Button Highlight
         if self.buy_rect.collidepoint(mouse_pos):
             pygame.draw.rect(screen, (255, 50, 50), self.buy_rect, 3, border_radius=8)
 
+        # Draw Player REM
         screen.blit(self.font_rem.render(str(rem), True, (253, 117, 234)), (280, 570))
 
-        text_x = 270
+        # Draw Selected Item Info
+        if self.selected_item_data and not self.sold_out.get(self.selected_item_data["id"], False):
+            text_x = 270
+            screen.blit(
+                self.font_title.render(self.selected_item_data["title"], True, self.selected_item_data["color"]),
+                (text_x, 155))
 
-        if self.selected_item == "Health Potion" and not self.sold_out["Health Potion"]:
-            screen.blit(self.font_title.render("Health Potion", True, (50, 255, 50)), (text_x, 155))
-            screen.blit(self.font_desc.render("Grants 3 Hits of Health.", True, (190, 200, 200)), (text_x, 205))
-            screen.blit(self.font_title.render("COST: 50 REM", True, (253, 117, 234)), (text_x, 240))
-        elif self.selected_item == "Mana Potion" and not self.sold_out["Mana Potion"]:
-            screen.blit(self.font_title.render("Mana Potion", True, (50, 50, 255)), (text_x, 155))
-            screen.blit(self.font_desc.render("Coming Soon...", True, (200, 200, 200)), (text_x, 205))
-        elif self.selected_item == "Wings Potion" and not self.sold_out["Wings Potion"]:
-            screen.blit(self.font_title.render("Wings Potion", True, (255, 200, 50)), (text_x, 155))
-            screen.blit(self.font_desc.render("Coming Soon...", True, (200, 200, 200)), (text_x, 205))
-        elif self.selected_item == "Purple Potion" and not self.sold_out["Purple Potion"]:
-            screen.blit(self.font_title.render("Purple Potion", True, (180, 50, 255)), (text_x, 155))
-            screen.blit(self.font_desc.render("Changes the..Nature", True, (200, 200, 200)), (text_x, 205))
-            screen.blit(self.font_desc.render("of your Magic", True, (200, 200, 200)), (text_x, 230))
-            screen.blit(self.font_title.render("COST: 75 REM", True, (253, 117, 234)), (text_x, 260))
-        elif self.selected_item == "Rainbow Potion" and not self.sold_out["Rainbow Potion"]:
-            screen.blit(self.font_title.render("Rainbow Potion", True, (255, 100, 255)), (text_x, 155))
-            screen.blit(self.font_desc.render("Unlocks ultimate secrets.", True, (190, 200, 200)), (text_x, 205))
-            screen.blit(self.font_title.render("COST: 100 REM", True, (253, 117, 234)), (text_x, 240))
+            y_offset = 205
+            for line in self.selected_item_data["desc"]:
+                screen.blit(self.font_desc.render(line, True, (190, 200, 200)), (text_x, y_offset))
+                y_offset += 25
+
+            screen.blit(self.font_title.render(f"COST: {self.selected_item_data['cost']} REM", True, (253, 117, 234)),
+                        (text_x, y_offset + 10))
 
 class Helldog(pygame.sprite.Sprite):
     def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
@@ -415,7 +499,6 @@ class Helldog(pygame.sprite.Sprite):
         self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 80
         self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 3.5, 1, "walk"
         self.image = self.walk_frames_right[0]
-
         self.rect = self.image.get_rect(x=spawn_x)
         self.y_offset = 160
         self.rect.bottom = y_pos + self.y_offset
@@ -426,8 +509,8 @@ class Helldog(pygame.sprite.Sprite):
         return self.health <= 0
 
     def update(self, camera_x, player_x=None, player_y=None):
-        if player_x and player_y and abs(player_y - self.rect.centery) < 150:
-            if abs(player_x - self.rect.centerx) < 220 and self.state != "attack":
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 320 and self.state != "attack":
                 self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
                 self.direction = 1 if player_x > self.rect.centerx else -1
 
@@ -450,26 +533,31 @@ class Helldog(pygame.sprite.Sprite):
                 if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
             if self.state == "attack":
                 self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
-                self.attack_frames_left[self.frame_index]
+                    self.attack_frames_left[self.frame_index]
 
         old_bottom = self.rect.bottom
         self.rect = self.image.get_rect(center=self.rect.center)
         self.rect.bottom = old_bottom
-        self.mask = pygame.mask.from_surface(self.image)
+
+        # --- PERFORMANCE FIX: Only generate mask if animation frame changed ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
         if self.rect.right < camera_x - 1000: self.kill()
 
 
 class Mau(pygame.sprite.Sprite):
     def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
         super().__init__()
-        self.health = 2
-        self.rem_value = 15
+        # Boosted Mau's health to 3 to throw players off!
+        self.health = 3
+        self.rem_value = 12
         self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
         self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
         self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 100
         self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 2.0, 1, "walk"
         self.image = self.walk_frames_right[0]
-
         self.rect = self.image.get_rect(x=spawn_x)
         self.y_offset = 160
         self.rect.bottom = y_pos + self.y_offset
@@ -480,8 +568,8 @@ class Mau(pygame.sprite.Sprite):
         return self.health <= 0
 
     def update(self, camera_x, player_x=None, player_y=None):
-        if player_x and player_y and abs(player_y - self.rect.centery) < 150:
-            if abs(player_x - self.rect.centerx) < 160 and self.state != "attack":
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
                 self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
                 self.direction = 1 if player_x > self.rect.centerx else -1
 
@@ -504,12 +592,17 @@ class Mau(pygame.sprite.Sprite):
                 if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
             if self.state == "attack":
                 self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
-                self.attack_frames_left[self.frame_index]
+                    self.attack_frames_left[self.frame_index]
 
         old_bottom = self.rect.bottom
         self.rect = self.image.get_rect(center=self.rect.center)
         self.rect.bottom = old_bottom
-        self.mask = pygame.mask.from_surface(self.image)
+
+        # --- PERFORMANCE FIX: Only generate mask if animation frame changed ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
         if self.rect.right < camera_x - 1000: self.kill()
 
 
@@ -523,7 +616,6 @@ class Pkgrim(pygame.sprite.Sprite):
         self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 90
         self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 2.5, 1, "walk"
         self.image = self.walk_frames_right[0]
-
         self.rect = self.image.get_rect(x=spawn_x)
         self.y_offset = 160
         self.rect.bottom = y_pos + self.y_offset
@@ -534,8 +626,8 @@ class Pkgrim(pygame.sprite.Sprite):
         return self.health <= 0
 
     def update(self, camera_x, player_x=None, player_y=None):
-        if player_x and player_y and abs(player_y - self.rect.centery) < 150:
-            if abs(player_x - self.rect.centerx) < 180 and self.state != "attack":
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
                 self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
                 self.direction = 1 if player_x > self.rect.centerx else -1
 
@@ -558,13 +650,19 @@ class Pkgrim(pygame.sprite.Sprite):
                 if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
             if self.state == "attack":
                 self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
-                self.attack_frames_left[self.frame_index]
+                    self.attack_frames_left[self.frame_index]
 
         old_bottom = self.rect.bottom
         self.rect = self.image.get_rect(center=self.rect.center)
         self.rect.bottom = old_bottom
-        self.mask = pygame.mask.from_surface(self.image)
+
+        # --- PERFORMANCE FIX: Only generate mask if animation frame changed ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
         if self.rect.right < camera_x - 1000: self.kill()
+
 
 class Azule(pygame.sprite.Sprite):
     def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
@@ -576,7 +674,6 @@ class Azule(pygame.sprite.Sprite):
         self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 90
         self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 2.2, 1, "walk"
         self.image = self.walk_frames_right[0]
-
         self.rect = self.image.get_rect(x=spawn_x)
         self.y_offset = 160
         self.rect.bottom = y_pos + self.y_offset
@@ -587,8 +684,8 @@ class Azule(pygame.sprite.Sprite):
         return self.health <= 0
 
     def update(self, camera_x, player_x=None, player_y=None):
-        if player_x and player_y and abs(player_y - self.rect.centery) < 150:
-            if abs(player_x - self.rect.centerx) < 190 and self.state != "attack":
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 320 and self.state != "attack":
                 self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
                 self.direction = 1 if player_x > self.rect.centerx else -1
 
@@ -601,7 +698,8 @@ class Azule(pygame.sprite.Sprite):
             if pygame.time.get_ticks() - self.update_time > self.anim_speed:
                 self.update_time = pygame.time.get_ticks()
                 self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
-            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[self.frame_index]
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                self.frame_index]
 
         elif self.state == "attack":
             if pygame.time.get_ticks() - self.update_time > 70:
@@ -610,28 +708,32 @@ class Azule(pygame.sprite.Sprite):
                 if self.frame_index >= len(self.attack_frames_right):
                     self.state, self.frame_index = "walk", 0
             if self.state == "attack":
-                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else self.attack_frames_left[self.frame_index]
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                self.attack_frames_left[self.frame_index]
 
         old_bottom = self.rect.bottom
         self.rect = self.image.get_rect(center=self.rect.center)
         self.rect.bottom = old_bottom
-        self.mask = pygame.mask.from_surface(self.image)
+
+        # --- PERFORMANCE FIX: Only generate mask if animation frame changed ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
         if self.rect.right < camera_x - 1000:
             self.kill()
+
 
 class Titus(pygame.sprite.Sprite):
     def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
         super().__init__()
-        # Heavier health and REM for the big knight
         self.health = 4
         self.rem_value = 15
         self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
         self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
         self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 100
-        # Slower speed (1.8) to give him a heavy, lumbering feel
         self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 1.8, 1, "walk"
         self.image = self.walk_frames_right[0]
-
         self.rect = self.image.get_rect(x=spawn_x)
         self.y_offset = 160
         self.rect.bottom = y_pos + self.y_offset
@@ -642,8 +744,8 @@ class Titus(pygame.sprite.Sprite):
         return self.health <= 0
 
     def update(self, camera_x, player_x=None, player_y=None):
-        if player_x and player_y and abs(player_y - self.rect.centery) < 150:
-            if abs(player_x - self.rect.centerx) < 220 and self.state != "attack": # Slightly wider attack range for the huge sword
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 350 and self.state != "attack":
                 self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
                 self.direction = 1 if player_x > self.rect.centerx else -1
 
@@ -656,7 +758,8 @@ class Titus(pygame.sprite.Sprite):
             if pygame.time.get_ticks() - self.update_time > self.anim_speed:
                 self.update_time = pygame.time.get_ticks()
                 self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
-            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[self.frame_index]
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                self.frame_index]
 
         elif self.state == "attack":
             if pygame.time.get_ticks() - self.update_time > 70:
@@ -665,11 +768,145 @@ class Titus(pygame.sprite.Sprite):
                 if self.frame_index >= len(self.attack_frames_right):
                     self.state, self.frame_index = "walk", 0
             if self.state == "attack":
-                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else self.attack_frames_left[self.frame_index]
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                self.attack_frames_left[self.frame_index]
 
         old_bottom = self.rect.bottom
         self.rect = self.image.get_rect(center=self.rect.center)
         self.rect.bottom = old_bottom
-        self.mask = pygame.mask.from_surface(self.image)
+
+        # --- PERFORMANCE FIX: Only generate mask if animation frame changed ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
         if self.rect.right < camera_x - 1000:
             self.kill()
+
+
+class Lionel(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
+        super().__init__()
+        self.health = 4
+        self.rem_value = 15
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 90
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 2.5, 1, "walk"
+        self.image = self.walk_frames_right[0]
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 320 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x:
+                self.rect.x, self.direction = self.patrol_end_x, -1
+            elif self.rect.x <= self.patrol_start_x:
+                self.rect.x, self.direction = self.patrol_start_x, 1
+            if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                self.frame_index]
+
+        elif self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 70:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index += 1
+                if self.frame_index >= len(self.attack_frames_right):
+                    self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+
+        # --- PERFORMANCE FIX ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
+        if self.rect.right < camera_x - 1000:
+            self.kill()
+
+
+class Demented(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, idle_r, idle_l, attack_r,
+                 attack_l):
+        super().__init__()
+        self.health = 3
+        self.rem_value = 12
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.idle_frames_right, self.idle_frames_left = idle_r, idle_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 100
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 1.8, 1, "walk"
+        self.image = self.walk_frames_right[0]
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x or self.rect.x <= self.patrol_start_x:
+                self.rect.x = self.patrol_end_x if self.direction == 1 else self.patrol_start_x
+                self.direction *= -1
+                self.state, self.frame_index = "idle", 0
+            if self.state == "walk":
+                if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                    self.update_time, self.frame_index = pygame.time.get_ticks(), (self.frame_index + 1) % len(
+                        self.walk_frames_right)
+                self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                    self.frame_index]
+
+        if self.state == "idle":
+            if pygame.time.get_ticks() - self.update_time > 120:
+                self.update_time, self.frame_index = pygame.time.get_ticks(), self.frame_index + 1
+                if self.frame_index >= len(self.idle_frames_right): self.state, self.frame_index = "walk", 0
+            if self.state == "idle":
+                self.image = self.idle_frames_right[self.frame_index] if self.direction == 1 else self.idle_frames_left[
+                    self.frame_index]
+
+        if self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 80:
+                self.update_time, self.frame_index = pygame.time.get_ticks(), self.frame_index + 1
+                if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+
+        # --- PERFORMANCE FIX ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
+        if self.rect.right < camera_x - 1000: self.kill()

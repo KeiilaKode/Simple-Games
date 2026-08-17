@@ -114,7 +114,20 @@ purple_explode_img = pygame.image.load("spritsheets/purple_ball_explode.png").co
 
 end_image = pygame.transform.smoothscale(pygame.image.load("backgrounds/death_screen.png").convert_alpha(),
                                          (SCREEN_WIDTH, SCREEN_HEIGHT))
+# --- NEW: Load the Pause Menu Tombstone ---
+try:
+    pause_bg_raw = pygame.image.load("backgrounds/pause1.png").convert_alpha()
+    # Scaling to 650x750 so it takes up most of the screen height but keeps its shape
+    pause_bg = pygame.transform.smoothscale(pause_bg_raw, (1200, 1150))
+except pygame.error:
+    pause_bg = None
 
+# --- NEW: Load the Death Screen Overlay ---
+try:
+    death_overlay_raw = pygame.image.load("backgrounds/death overlay.png").convert_alpha()
+    death_overlay = pygame.transform.smoothscale(death_overlay_raw, (1100, 1150))
+except pygame.error:
+    death_overlay = None
 
 def draw_text(text, font, text_col, x, y): screen.blit(font.render(text, True, text_col), (x, y))
 
@@ -148,10 +161,17 @@ is_level_2_merchant = False
 
 global_merchant_sold_out = {
     "Health Potion": False,
-    "Mana Potion": False,
+    "Teal Potion": False,
+    "Emerald Potion": False,
+    "Pink Potion": False,
+    "Mysterious Potion": False,
+    "Silver Potion": False,
     "Wings Potion": False,
     "Purple Potion": False,
-    "Rainbow Potion": False
+    "Mana Potion": False,
+    "Rainbow Potion": False,
+    "Royal Potion": False,
+    "Gold Potion": False
 }
 
 player_has_purple_magic = False
@@ -253,7 +273,12 @@ while run:
                         enemy_targets.extend(
                             [current_level.helldog_group, current_level.mau_group, current_level.pkgrim_group])
                     elif current_state == "LEVEL_3":
-                        enemy_targets.extend([current_level.azule_group, current_level.titus_group])
+                        enemy_targets.extend([
+                        current_level.azule_group,
+                        current_level.titus_group,
+                        current_level.lionel_group,
+                        current_level.demented_group
+                    ])
 
                     for group in enemy_targets:
                         for target in group:
@@ -339,7 +364,9 @@ while run:
                             merchant_npc = None
                             merchant_ui = None
 
-                            if current_state in ["LEVEL_2", "LEVEL_3"]:
+                            if current_state == "LEVEL_3":
+                                pygame.mixer.music.load("mats/Ballade no. 1 in G minor, Op. 23.mp3")
+                            elif current_state == "LEVEL_2":
                                 pygame.mixer.music.load("mats/Toccata and Fugue in Dm, BWV 565.mp3")
                             else:
                                 pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")
@@ -354,6 +381,8 @@ while run:
         if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
             current_level.draw(screen, camera_x)
             succi_blit_x, succi_blit_y = succi.draw(screen, camera_x)
+            if abs(succi.x - current_level.door_world_x) < 150:
+                draw_text("Press 'E' to Enter", font_small, Color("turquoise1"), succi_blit_x + 20, succi_blit_y - 80)
 
             for proj in projectile_group:
                 if -200 < (px := proj.rect.x - camera_x) < SCREEN_WIDTH + 200: screen.blit(proj.image,
@@ -366,7 +395,12 @@ while run:
                 enemy_groups_to_check.extend(
                     [current_level.helldog_group, current_level.mau_group, current_level.pkgrim_group])
             elif current_state == "LEVEL_3":
-                enemy_groups_to_check.extend([current_level.azule_group, current_level.titus_group])
+                enemy_groups_to_check.extend([
+                current_level.azule_group,
+                current_level.titus_group,
+                current_level.lionel_group,
+                current_level.demented_group
+            ])
 
             for group in enemy_groups_to_check:
                 for target in group:
@@ -381,8 +415,8 @@ while run:
                                 except NameError:
                                     pass
 
-            current_bg_index = int(succi.x // current_level.bg_w)
-            if current_bg_index >= current_level.max_backgrounds - 1:
+            # --- Localized Merchant Door Check ---
+            if abs(succi.x - current_level.door_world_x) < 150:
                 if keys[pygame.K_e]:
                     last_completed_level = current_state
                     is_level_2_merchant = (current_state in ["LEVEL_2", "LEVEL_3"])
@@ -390,10 +424,12 @@ while run:
                     pygame.mixer.music.stop()
 
                     if is_level_2_merchant:
-                        merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT, "spritsheets/merchant_lvl2_sheet.png",
+                        merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT,
+                                                "spritsheets/merchant_lvl2_sheet.png",
                                                 columns=10, rows=7, target_duration=12200)
                     else:
-                        merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT, "spritsheets/merchant_lvl1_sheet.png",
+                        merchant_npc = Merchant(SCREEN_WIDTH, SCREEN_HEIGHT,
+                                                "spritsheets/merchant_lvl1_sheet.png",
                                                 columns=10, rows=6)
 
                     merchant_ui = Merchant_UI(SCREEN_WIDTH, SCREEN_HEIGHT, global_merchant_sold_out)
@@ -412,65 +448,125 @@ while run:
         draw_panel(score, rem)
         draw_health_bar(succi.health, succi.max_health)
 
+        # Pause Menu
         if paused:
+            # Draw the dark transparent background
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 180))
+            overlay.fill((0, 0, 0, 100))
             screen.blit(overlay, (0, 0))
 
-            draw_text("GAME PAUSED", font_big, Color("turquoise1"), SCREEN_WIDTH // 2 - 180, SCREEN_HEIGHT // 2 - 50)
-            draw_text("Press 'P' or 'ESC' to Resume", font_small, LIGHT_GRAY, SCREEN_WIDTH // 2 - 140,
-                      SCREEN_HEIGHT // 2 + 20)
+            # --- 1. IMAGE PLACEMENT ---
+            # Added "+ 50" to push the tombstone down slightly
+            if pause_bg:
+                pb_rect = pause_bg.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50))
+                screen.blit(pause_bg, pb_rect)
 
-            ctrl_x = SCREEN_WIDTH - 280
-            draw_text("CONTROLS:", font_small, PINK, ctrl_x, 50)
-            draw_text("Arrow Keys : Move / Duck", font_small, Color("blue1"), ctrl_x, 80)
-            draw_text("Shift           : Run", font_small, Color("blue1"), ctrl_x, 105)
-            draw_text("Space         : Jump", font_small, Color("blue1"), ctrl_x, 130)
-            draw_text("F Key          : Cast Fireball", font_small, Color("blue1"), ctrl_x, 155)
-            draw_text("E Key          : Enter/Exit", font_small, Color("blue1"), ctrl_x, 180)
-            draw_text("P / ESC       : Pause", font_small, PINK, ctrl_x, 205)
+            # --- 2. TEXT PLACEMENT ---
+            # start_y controls up/down. Changing - 130 to - 40 pushed it all down.
+            start_y = SCREEN_HEIGHT // 2 + 30
 
+            # text_x controls left/right. Added + 15 to scoot everything to the right.
+            text_x = SCREEN_WIDTH // 2 + 15
+
+            draw_text("GAME PAUSED", font_big, Color("turquoise1"), text_x - 165, start_y)
+            draw_text("Press 'P' or 'ESC' to Resume", font_small, LIGHT_GRAY, text_x - 145, start_y + 55)
+
+            ctrl_y = start_y + 115
+            ctrl_x = text_x - 130
+
+            draw_text("CONTROLS:", font_small, PINK, text_x - 60, ctrl_y)
+            draw_text("Arrow Keys : Move / Duck", font_small, Color("blue1"), ctrl_x, ctrl_y + 35)
+            draw_text("Shift      : Run", font_small, Color("blue1"), ctrl_x, ctrl_y + 60)
+            draw_text("Space      : Jump", font_small, Color("blue1"), ctrl_x, ctrl_y + 85)
+            draw_text("F Key      : Cast Fireball", font_small, Color("blue1"), ctrl_x, ctrl_y + 110)
+            draw_text("E Key      : Enter/Exit", font_small, Color("blue1"), ctrl_x, ctrl_y + 135)
+            draw_text("P / ESC    : Pause", font_small, PINK, ctrl_x, ctrl_y + 160)
+
+
+
+
+
+    # Death screen
     else:
+        # 1. Draw the purple graveyard background
         screen.blit(end_image, (0, 0))
-        pygame.draw.line(screen, Color("plum1"), (350, 245), ((SCREEN_WIDTH // 2 + 330, 245)), 6)
-        draw_text("YOUR SOUL HAS BEEN LOST!!", font_big, Color("blue1"), SCREEN_WIDTH // 2 - 350, 250)
-        pygame.draw.line(screen, Color("plum1"), (350, 315), ((SCREEN_WIDTH // 2 + 330, 315)), 6)
-        draw_text(f"SCORE: {score}", font_big, Color("turquoise1"), SCREEN_WIDTH // 2 - 150, 320)
-        pygame.draw.line(screen, Color("plum1"), (350, 400), ((SCREEN_WIDTH // 2 + 330, 400)), 6)
 
+        # 2. Draw the Gargoyle Tombstone overlay slightly shifted down
+        if death_overlay:
+            do_rect = death_overlay.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50))
+            screen.blit(death_overlay, do_rect)
+
+        # 3. Center the text and restore pink lines inside the tombstone
+        center_x = SCREEN_WIDTH // 2
+        start_y = SCREEN_HEIGHT // 2 - 35  # Shifted down slightly for perfect vertical centering
+
+        # Reduced line width (from 175 to 155) to tuck them safely away from the edges
+        line_w = 155
+        line_left = center_x - line_w
+        line_right = center_x + line_w + 40
+        line_color = Color("plum1")
+        line_thickness = 6
+
+
+        # Helper function to automatically center and scale text perfectly
+
+        def draw_centered_scaled_text(text, font, color, y_pos, scale):
+            raw_text = font.render(text, True, color)
+            scaled_w = int(raw_text.get_width() * scale)
+            scaled_h = int(raw_text.get_height() * scale)
+            scaled_text = pygame.transform.smoothscale(raw_text, (scaled_w, scaled_h))
+            text_rect = scaled_text.get_rect(center=(center_x + 20, y_pos))
+            screen.blit(scaled_text, text_rect)
+
+        # Top Line
+        pygame.draw.line(screen, line_color, (line_left, start_y - 45), (line_right, start_y - 45), line_thickness)
+        # Title (Scaled down to 0.45 so it fits cleanly inside the lines)
+        draw_centered_scaled_text("YOUR SOUL HAS BEEN LOST!!", font_big, Color("turquoise1"), start_y, 0.50)
+        # Middle Line 1
+        pygame.draw.line(screen, line_color, (line_left, start_y + 45), (line_right, start_y + 45), line_thickness)
+        # Score (Scaled down to 0.35 to keep it smaller than the title)
+        draw_centered_scaled_text(f"SCORE: {score}", font_big, Color("turquoise1"), start_y + 95, 0.45)
+        # Middle Line 2
+        pygame.draw.line(screen, line_color, (line_left, start_y + 145), (line_right, start_y + 145), line_thickness)
+        # Level Retry Subtext Logic (Scaled to stay inside the borders and centered)
         if checkpoint == 3:
-            draw_text("PRESS SPACE TO RETRY LEVEL 3", font_small, Color("blue1"), SCREEN_WIDTH // 2 - 160, 410)
-            draw_text("PRESS '1' TO RESTART AT LEVEL 1", font_small, Color("turquoise1"), SCREEN_WIDTH // 2 - 165, 435)
+            draw_centered_scaled_text("PRESS SPACE TO RETRY LEVEL 3", font_small, Color("turquoise1"), start_y + 185,
+                                      1.0)
+            draw_centered_scaled_text("PRESS '1' TO RESTART AT LEVEL 1", font_small, LIGHT_GRAY, start_y + 215, 0.8)
         elif checkpoint == 2:
-            draw_text("PRESS SPACE TO RETRY LEVEL 2", font_small, Color("blue1"), SCREEN_WIDTH // 2 - 160, 410)
-            draw_text("PRESS '1' TO RESTART AT LEVEL 1", font_small, Color("turquoise1"), SCREEN_WIDTH // 2 - 165, 435)
+            draw_centered_scaled_text("PRESS SPACE TO RETRY LEVEL 2", font_small, Color("turquoise1"), start_y + 185,
+                                      1.0)
+            draw_centered_scaled_text("PRESS '1' TO RESTART AT LEVEL 1", font_small, LIGHT_GRAY, start_y + 215, 0.8)
         else:
-            draw_text("PRESS SPACE TO TRY AGAIN", font_big, Color("blue1"), SCREEN_WIDTH // 2 - 330, 400)
-
-        pygame.draw.line(screen, Color("plum1"), (350, 475), (SCREEN_WIDTH // 2 + 330, 475), 6)
+            # Single line centered perfectly between mid-line 2 and bottom line
+            draw_centered_scaled_text("PRESS SPACE TO TRY AGAIN", font_small, Color("turquoise1"), start_y + 200, 1.2)
+        # Bottom Line
+        pygame.draw.line(screen, line_color, (line_left, start_y + 255), (line_right, start_y + 255), line_thickness)
 
         if score > high_score:
             high_score = score
             with open("score.txt", "w") as file: file.write(str(high_score))
-
         restart_action = None
+
         if pygame.key.get_pressed()[pygame.K_SPACE]:
             restart_action = checkpoint
+
         elif checkpoint in [2, 3] and pygame.key.get_pressed()[pygame.K_1]:
             restart_action = 1
             checkpoint = 1
 
         if restart_action is not None:
             game_over, paused, camera_x, rem = False, False, 0.0, 0
-
             old_max_health = succi.max_health if hasattr(succi, 'max_health') else 1
 
             if restart_action == 3:
                 current_state = "LEVEL_3"
                 current_level = Level_03(SCREEN_WIDTH, SCREEN_HEIGHT)
+
             elif restart_action == 2:
                 current_state = "LEVEL_2"
                 current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
+
             else:
                 if current_state != "LEVEL_1":
                     pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")
@@ -484,9 +580,9 @@ while run:
             current_level.reset()
             merchant_npc = None
             merchant_ui = None
-
             succi = Player(400.0, current_level.y_ground, animations, animation_speeds, animation_scale_corrections,
                            jump_fx, cast_fx)
+
             succi.max_health = old_max_health
             succi.health = old_max_health
             projectile_group.empty()
