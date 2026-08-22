@@ -321,8 +321,8 @@ while run:
                 camera_x = 0.0
                 projectile_group.empty()
 
-                # Using the Level 4 / Level 3 transition music
-                pygame.mixer.music.load("mats/Ballade no. 1 in G minor, Op. 23.mp3")
+                # Level 4 Music
+                pygame.mixer.music.load("mats/Polonaise in F sharp minor, Op. 44.mp3")
                 pygame.mixer.music.set_volume(0.2)
                 pygame.mixer.music.play(-1, 0.0)
 
@@ -513,7 +513,7 @@ while run:
                             merchant_ui = None
 
                             if current_state == "LEVEL_4":
-                                pygame.mixer.music.load("mats/Ballade no. 1 in G minor, Op. 23.mp3")
+                                pygame.mixer.music.load("mats/Polonaise in F sharp minor, Op. 44.mp3")
                             elif current_state == "LEVEL_3":
                                 pygame.mixer.music.load("mats/Ballade no. 1 in G minor, Op. 23.mp3")
                             elif current_state == "LEVEL_2":

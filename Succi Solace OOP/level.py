@@ -651,26 +651,40 @@ class Level_04(Level_01):
         # Load universal flyers
         self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
 
-        # Load new Level 4 Enemies!
-        scale = 0.55
-        self.elaine_walk_r, self.elaine_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/elaine_walk_ss.png", 8, scale)
-        self.elaine_atk_r, self.elaine_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/elaine_attack_ss.png", 10, scale)
+        # --- CUSTOM SCALES FOR EACH ENEMY ---
+        elaine_scale = 0.60
+        gk_scale = 0.65  # Increased to make the Groundskeeper bigger
+        rhh_scale = 0.55  # Decreased to make the Royal Hound smaller
+        rz_scale = 0.60
+        z1_scale = 0.60
+        z2_scale = 0.60
 
-        self.gk_walk_r, self.gk_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/groundskeeper_walk_ss.png", 8, scale)
-        self.gk_idle_r, self.gk_idle_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/groundskeeper_idle_ss.png", 6, scale)
-        self.gk_atk_r, self.gk_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/groundskeeper_attack_ss.png", 8, scale)
-
-        self.rhh_walk_r, self.rhh_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalhh_walk_ss.png", 12, scale)
-        self.rhh_atk_r, self.rhh_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalhh_attack_ss.png", 10, scale)
-
-        self.rz_walk_r, self.rz_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalzombie_walk_ss.png", 8, scale)
-        self.rz_atk_r, self.rz_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalzombie_attack_ss.png", 11, scale)
-
-        self.z1_walk_r, self.z1_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie1_walk_ss.png", 8, scale)
-        self.z1_atk_r, self.z1_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie1_attack_ss.png", 12, scale)
-
-        self.z2_walk_r, self.z2_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie2_walk_ss.png", 8, scale)
-        self.z2_atk_r, self.z2_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie2_attack_ss.png", 13, scale)
+        self.elaine_walk_r, self.elaine_walk_l = load_enemy_frames(
+            "spritsheets/enemies/lvl_4_enemies/elaine_walk_ss.png", 8, elaine_scale)
+        self.elaine_atk_r, self.elaine_atk_l = load_enemy_frames(
+            "spritsheets/enemies/lvl_4_enemies/elaine_attack_ss.png", 10, elaine_scale)
+        self.gk_walk_r, self.gk_walk_l = load_enemy_frames(
+            "spritsheets/enemies/lvl_4_enemies/groundskeeper_walk_ss.png", 8, gk_scale)
+        self.gk_idle_r, self.gk_idle_l = load_enemy_frames(
+            "spritsheets/enemies/lvl_4_enemies/groundskeeper_idle_ss.png", 6, gk_scale)
+        self.gk_atk_r, self.gk_atk_l = load_enemy_frames(
+            "spritsheets/enemies/lvl_4_enemies/groundskeeper_attack_ss.png", 8, gk_scale)
+        self.rhh_walk_r, self.rhh_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalhh_walk_ss.png",
+                                                             12, rhh_scale)
+        self.rhh_atk_r, self.rhh_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalhh_attack_ss.png",
+                                                           10, rhh_scale)
+        self.rz_walk_r, self.rz_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalzombie_walk_ss.png",
+                                                           8, rz_scale)
+        self.rz_atk_r, self.rz_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalzombie_attack_ss.png",
+                                                         11, rz_scale)
+        self.z1_walk_r, self.z1_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie1_walk_ss.png", 8,
+                                                           z1_scale)
+        self.z1_atk_r, self.z1_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie1_attack_ss.png", 12,
+                                                         z1_scale)
+        self.z2_walk_r, self.z2_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie2_walk_ss.png", 8,
+                                                           z2_scale)
+        self.z2_atk_r, self.z2_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie2_attack_ss.png", 13,
+                                                         z2_scale)
 
     def reset(self):
         super().reset()
