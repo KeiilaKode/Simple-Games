@@ -1,7 +1,6 @@
 # Succi Player Class
 import pygame
 
-
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, animations, animation_speeds, scale_corrections, jump_fx, cast_fx):
         super().__init__()
@@ -32,6 +31,8 @@ class Player(pygame.sprite.Sprite):
         self.fireball_spawned = False
         self.attacking = False
         self.recovering_duck = False
+        self.duck_pressed = False
+        self.current_spell_type = "normal"
 
         # Assets & Animations
         self.animations = animations
@@ -48,35 +49,19 @@ class Player(pygame.sprite.Sprite):
     def handle_input(self, keys):
         moving = False
         run_pressed = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
-        duck_pressed = keys[pygame.K_DOWN]
-        attack_pressed = keys[pygame.K_f]
+        duck_pressed = keys[pygame.K_DOWN] or keys[pygame.K_s]  # Now supports 'S' key
 
         self.recovering_duck = (self.current_anim == "duck" and not duck_pressed and self.playing)
         self.attacking = (self.current_anim in ["attack", "run_attack"] and self.playing)
 
-        # Trigger Attack State
-        if attack_pressed and not duck_pressed and not self.recovering_duck:
-            if not self.attacking:
-                is_moving_keys = keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]
-                if (is_moving_keys and run_pressed) or not self.on_ground:
-                    self.current_anim = "run_attack"
-                else:
-                    self.current_anim = "attack"
-
-                self.current_frame = 0
-                self.animation_timer = 0
-                self.playing = True
-                self.fireball_spawned = False
-                self.attacking = True
-
-        # Horizontal Movement Intent
+        # Horizontal Movement Intent (Now supports A and D)
         if self.current_anim == "attack" or self.recovering_duck or (duck_pressed and self.on_ground):
             self.vx = 0
-        elif keys[pygame.K_LEFT]:
+        elif keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.facing_right = False
             moving = True
             self.vx = - (self.speed_run if run_pressed else self.speed_walk)
-        elif keys[pygame.K_RIGHT]:
+        elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.facing_right = True
             moving = True
             self.vx = (self.speed_run if run_pressed else self.speed_walk)
@@ -84,8 +69,7 @@ class Player(pygame.sprite.Sprite):
             self.vx = 0
 
         # Jump Intent
-        if keys[
-            pygame.K_SPACE] and self.on_ground and not duck_pressed and not self.recovering_duck and not self.attacking:
+        if keys[pygame.K_SPACE] and self.on_ground and not duck_pressed and not self.recovering_duck and not self.attacking:
             if moving and "run_jump" in self.animations:
                 self.current_anim = "run_jump"
             else:
@@ -99,6 +83,21 @@ class Player(pygame.sprite.Sprite):
                 self.jump_fx.play()
 
         return moving, run_pressed, duck_pressed
+
+    def trigger_attack(self, run_pressed, moving):
+        """Triggered externally by mouse clicks in main.py"""
+        if not getattr(self, 'duck_pressed', False) and not self.recovering_duck:
+            if not self.attacking:
+                if (moving and run_pressed) or not self.on_ground:
+                    self.current_anim = "run_attack"
+                else:
+                    self.current_anim = "attack"
+
+                self.current_frame = 0
+                self.animation_timer = 0
+                self.playing = True
+                self.fireball_spawned = False
+                self.attacking = True
 
     def update_physics(self, dt, platform_group):
         self.x += self.vx * dt

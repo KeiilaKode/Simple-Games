@@ -7,7 +7,7 @@ from pygame import mixer, Color
 # OOP Imports
 from player import Player
 from entities import Projectile, Merchant, Merchant_UI
-from level import Level_01, Level_02, Level_03, Merchant_Room
+from level import Level_01, Level_02, Level_03, Level_04, Merchant_Room
 
 if getattr(sys, 'frozen', False):
     os.chdir(sys._MEIPASS)
@@ -33,9 +33,12 @@ clock = pygame.time.Clock()
 FPS = 60
 
 try:
-    pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")
+
+    pygame.mixer.music.load("mats/Prelude and Fughetta in D minor, BWV 899 (Pedal-Harpsichord).mp3")
     pygame.mixer.music.set_volume(0.2)
-    # Auto-play removed for Main Menu
+    pygame.mixer.music.play(-1, 0.0)  # Start playing immediately on the main menu
+
+
 
     jump_fx = pygame.mixer.Sound("mats/Swoosh.mp3")
     jump_fx.set_volume(0.3)
@@ -227,10 +230,11 @@ class MainMenu:
             screen.blit(overlay, (0, 0))
             lines = [
                 ("CONTROLS", (253, 117, 234)),
-                ("Arrow Keys : Move / Duck", (100, 200, 255)),
+                ("WASD / Arrows : Move & Duck", (100, 200, 255)),
                 ("Shift : Run", (100, 200, 255)),
                 ("Space : Jump", (100, 200, 255)),
-                ("F Key : Cast Fireball", (100, 200, 255)),
+                ("Left Mouse : Cast Red Fireball", (100, 200, 255)),
+                ("Right Mouse : Cast Purple Magic", (100, 200, 255)),
                 ("E Key : Enter / Exit Merchant", (100, 200, 255)),
                 ("P / ESC : Pause", (253, 117, 234)),
                 ("", (0, 0, 0)),
@@ -297,31 +301,51 @@ while run:
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT: run = False
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
-                if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
+                if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3", "LEVEL_4"]:
                     if not game_over: paused = not paused
 
             # M Key warped to work in ALL Levels
-            elif event.key == pygame.K_m and current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
+            elif event.key == pygame.K_m and current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3", "LEVEL_4"]:
                 succi.x = current_level.door_world_x
                 camera_x = current_level.level_end_x - SCREEN_WIDTH
-            elif event.key == pygame.K_n and current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
-                current_state = "LEVEL_2"
-                checkpoint = 2
-                current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
+            # N Key warped to work in ALL Levels to jump to Level 4
+            elif event.key == pygame.K_n and current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3", "LEVEL_4"]:
+                current_state = "LEVEL_4"
+                checkpoint = 4
+                current_level = Level_04(SCREEN_WIDTH, SCREEN_HEIGHT)
                 succi = Player(400.0, current_level.y_ground, animations, animation_speeds, animation_scale_corrections,
                                jump_fx, cast_fx)
                 succi.max_health = 3
                 succi.health = 3
                 camera_x = 0.0
                 projectile_group.empty()
-                pygame.mixer.music.load("mats/Toccata and Fugue in Dm, BWV 565.mp3")
+
+                # Using the Level 4 / Level 3 transition music
+                pygame.mixer.music.load("mats/Ballade no. 1 in G minor, Op. 23.mp3")
                 pygame.mixer.music.set_volume(0.2)
                 pygame.mixer.music.play(-1, 0.0)
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mouse_click = True
+        # Handle Mouse Down Events
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                mouse_click = True  # Allows menu/merchant interaction
+
+            # --- MOUSE CLICK COMBAT CONTROLS ---
+            if not game_over and not paused and current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3", "LEVEL_4"]:
+                is_moving = keys[pygame.K_LEFT] or keys[pygame.K_RIGHT] or keys[pygame.K_a] or keys[pygame.K_d]
+                is_running = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+
+                if event.button == 1:  # Left Click: Standard Fireball
+                    succi.trigger_attack(is_running, is_moving)
+                    succi.current_spell_type = "normal"
+
+                elif event.button == 3:  # Right Click: Purple Spell (Only if purchased)
+                    if player_has_purple_magic:
+                        succi.trigger_attack(is_running, is_moving)
+                        succi.current_spell_type = "purple"
 
     if current_state == "MAIN_MENU":
         action = main_menu.update(mouse_pos, mouse_click)
@@ -335,11 +359,14 @@ while run:
             camera_x = 0.0
             game_over = False
             paused = False
+
+            # Switch to the Level 1 music when entering the game
+            pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")
             pygame.mixer.music.play(-1, 0.0)
 
     elif not game_over and not paused:
 
-        if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
+        if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3", "LEVEL_4"]:
             succi.update(keys, dt, dt_ms, current_level.platform_group, animation_loops)
 
             if succi.x > current_level.level_end_x - 100:
@@ -350,8 +377,10 @@ while run:
                     not succi.fireball_spawned):
                 spawn_x = succi.x + (90 if succi.facing_right else -90)
 
-                active_fireball = purple_fireball_img if player_has_purple_magic else fireball_img
-                active_explode = purple_explode_img if player_has_purple_magic else explode_img
+                # Check the assigned spell type to spawn the correct projectile
+                is_purple = getattr(succi, 'current_spell_type', 'normal') == "purple"
+                active_fireball = purple_fireball_img if is_purple else fireball_img
+                active_explode = purple_explode_img if is_purple else explode_img
 
                 projectile_group.add(
                     Projectile(spawn_x, succi.y - 180, 1 if succi.facing_right else -1,
@@ -390,6 +419,8 @@ while run:
                             current_level.lionel_group,
                             current_level.demented_group
                         ])
+                    elif current_state == "LEVEL_4":
+                        enemy_targets.extend([current_level.demon_group, current_level.skeleton_group])
 
                     for group in enemy_targets:
                         for target in group:
@@ -461,7 +492,10 @@ while run:
                                 current_level = Level_03(SCREEN_WIDTH, SCREEN_HEIGHT)
                                 checkpoint = 3
                             elif last_completed_level == "LEVEL_3":
-                                # Assuming there is no Level 4 yet, drop back to 1
+                                current_state = "LEVEL_4"
+                                current_level = Level_04(SCREEN_WIDTH, SCREEN_HEIGHT)
+                                checkpoint = 4
+                            elif last_completed_level == "LEVEL_4":
                                 current_state = "LEVEL_1"
                                 current_level = Level_01(SCREEN_WIDTH, SCREEN_HEIGHT)
                                 checkpoint = 1
@@ -472,7 +506,9 @@ while run:
                             merchant_npc = None
                             merchant_ui = None
 
-                            if current_state == "LEVEL_3":
+                            if current_state == "LEVEL_4":
+                                pygame.mixer.music.load("mats/Ballade no. 1 in G minor, Op. 23.mp3")
+                            elif current_state == "LEVEL_3":
                                 pygame.mixer.music.load("mats/Ballade no. 1 in G minor, Op. 23.mp3")
                             elif current_state == "LEVEL_2":
                                 pygame.mixer.music.load("mats/Toccata and Fugue in Dm, BWV 565.mp3")
@@ -490,7 +526,7 @@ while run:
 
     else:
         if not game_over:
-            if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3"]:
+            if current_state in ["LEVEL_1", "LEVEL_2", "LEVEL_3", "LEVEL_4"]:
                 current_level.draw(screen, camera_x)
                 succi_blit_x, succi_blit_y = succi.draw(screen, camera_x)
                 if abs(succi.x - current_level.door_world_x) < 150:
@@ -514,6 +550,8 @@ while run:
                         current_level.lionel_group,
                         current_level.demented_group
                     ])
+                elif current_state == "LEVEL_4":
+                    enemy_groups_to_check.extend([current_level.demon_group, current_level.skeleton_group])
 
                 for group in enemy_groups_to_check:
                     for target in group:
@@ -532,7 +570,7 @@ while run:
                 if abs(succi.x - current_level.door_world_x) < 150:
                     if keys[pygame.K_e]:
                         last_completed_level = current_state
-                        is_level_2_merchant = (current_state in ["LEVEL_2", "LEVEL_3"])
+                        is_level_2_merchant = (current_state in ["LEVEL_2", "LEVEL_3", "LEVEL_4"])
                         current_state = "MERCHANT"
                         pygame.mixer.music.stop()
 
@@ -584,10 +622,10 @@ while run:
                 ctrl_x = text_x - 130
 
                 draw_text("CONTROLS:", font_small, PINK, text_x - 60, ctrl_y)
-                draw_text("Arrow Keys : Move / Duck", font_small, Color("blue1"), ctrl_x, ctrl_y + 35)
+                draw_text("WASD / Arrows : Move & Duck", font_small, Color("blue1"), ctrl_x, ctrl_y + 35)
                 draw_text("Shift      : Run", font_small, Color("blue1"), ctrl_x, ctrl_y + 60)
                 draw_text("Space      : Jump", font_small, Color("blue1"), ctrl_x, ctrl_y + 85)
-                draw_text("F Key      : Cast Fireball", font_small, Color("blue1"), ctrl_x, ctrl_y + 110)
+                draw_text("Left Click : Cast Fireball", font_small, Color("blue1"), ctrl_x, ctrl_y + 110)
                 draw_text("E Key      : Enter/Exit", font_small, Color("blue1"), ctrl_x, ctrl_y + 135)
                 draw_text("P / ESC    : Pause", font_small, PINK, ctrl_x, ctrl_y + 160)
 
@@ -642,7 +680,12 @@ while run:
                              line_thickness)
 
             # Level Retry Subtext Logic (Scaled to stay inside the borders and centered)
-            if checkpoint == 3:
+            if checkpoint == 4:
+                draw_centered_scaled_text("PRESS SPACE TO RETRY LEVEL 4", font_small, Color("turquoise1"),
+                                          start_y + 185,
+                                          1.0)
+                draw_centered_scaled_text("PRESS '1' TO RESTART AT LEVEL 1", font_small, LIGHT_GRAY, start_y + 215, 0.8)
+            elif checkpoint == 3:
                 draw_centered_scaled_text("PRESS SPACE TO RETRY LEVEL 3", font_small, Color("turquoise1"),
                                           start_y + 185,
                                           1.0)
@@ -665,7 +708,7 @@ while run:
             if pygame.key.get_pressed()[pygame.K_SPACE]:
                 restart_action = checkpoint
 
-            elif checkpoint in [2, 3] and pygame.key.get_pressed()[pygame.K_1]:
+            elif checkpoint in [2, 3, 4] and pygame.key.get_pressed()[pygame.K_1]:
                 restart_action = 1
                 checkpoint = 1
 
@@ -673,14 +716,15 @@ while run:
                 game_over, paused, camera_x, rem = False, False, 0.0, 0
                 old_max_health = succi.max_health if hasattr(succi, 'max_health') else 1
 
-                if restart_action == 3:
+                if restart_action == 4:
+                    current_state = "LEVEL_4"
+                    current_level = Level_04(SCREEN_WIDTH, SCREEN_HEIGHT)
+                elif restart_action == 3:
                     current_state = "LEVEL_3"
                     current_level = Level_03(SCREEN_WIDTH, SCREEN_HEIGHT)
-
                 elif restart_action == 2:
                     current_state = "LEVEL_2"
                     current_level = Level_02(SCREEN_WIDTH, SCREEN_HEIGHT)
-
                 else:
                     if current_state != "LEVEL_1":
                         pygame.mixer.music.load("mats/Phaneroza-_No-Umbra-No-Penumbra.mp3")

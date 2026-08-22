@@ -412,7 +412,6 @@ class Level_02(Level_01):
                     screen.blit(enemy.image, (x, enemy.rect.top))
 
 
-# --- NEW LEVEL 3 CLASS ---
 class Level_03(Level_01):
     def __init__(self, screen_width, screen_height):
         self.platform_offset_ratio = 0.22
@@ -576,3 +575,77 @@ class Level_03(Level_01):
         for enemy in self.demented_group:
             if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
                 screen.blit(enemy.image, (x, enemy.rect.top))
+
+
+# --- NEW LEVEL 4 CLASS ---
+class Level_04(Level_01):
+    def __init__(self, screen_width, screen_height):
+        # Increased to drop the collision line past the angel statue to the flat stone!
+        self.platform_offset_ratio = 0.40
+        self.floor_y_offset = 0
+        super().__init__(screen_width, screen_height)
+
+    def load_assets(self):
+        # 1. Start background
+        full_bg_filenames = ["backgrounds/lvl_4_bgs/gy_start.PNG"]
+
+        # 2. Setup the loop section (gy1 through gy10)
+        loop_bgs = [
+            "backgrounds/lvl_4_bgs/gy1.png",
+            "backgrounds/lvl_4_bgs/gy2.png",
+            "backgrounds/lvl_4_bgs/gy3.PNG",
+            "backgrounds/lvl_4_bgs/gy4.png",
+            "backgrounds/lvl_4_bgs/gy5.PNG",
+            "backgrounds/lvl_4_bgs/gy6.png",
+            "backgrounds/lvl_4_bgs/gy7.png",
+            "backgrounds/lvl_4_bgs/gy8.png",
+            "backgrounds/lvl_4_bgs/gy9.png",
+            "backgrounds/lvl_4_bgs/gy10.png"
+        ]
+
+        # 3. Add the loop sequence twice
+        full_bg_filenames.extend(loop_bgs)
+        full_bg_filenames.extend(loop_bgs)
+
+        # 4. End background
+        full_bg_filenames.append("backgrounds/lvl_4_bgs/gy_last.png")
+
+        first_raw = pygame.image.load(full_bg_filenames[0]).convert()
+        first_trimmed = trim_black_side_borders(first_raw)
+        bg_scale_ratio = self.screen_height / first_trimmed.get_height()
+        self.bg_w = int(first_trimmed.get_width() * bg_scale_ratio) - 1
+
+        self.bg_list = [pygame.transform.smoothscale(trim_black_side_borders(pygame.image.load(f).convert()),
+                                                     (self.bg_w, self.screen_height)) for f in full_bg_filenames]
+        self.max_backgrounds = len(full_bg_filenames)
+
+        # Load Custom Level 4 Floor (Now trimming the transparent pixels to fix the gaps!)
+        raw_floor = pygame.image.load("mats/platforms/lvl4_floor.png").convert_alpha()
+        trimmed_floor = trim_transparent_borders(raw_floor)
+
+        self.target_floor_h = 200
+        floor_scale_ratio = self.target_floor_h / trimmed_floor.get_height()
+        self.floor_w = int(trimmed_floor.get_width() * floor_scale_ratio) - 1
+        self.floor_img = pygame.transform.smoothscale(trimmed_floor, (self.floor_w, self.target_floor_h))
+        self.floor_flip_img = pygame.transform.flip(self.floor_img, True, False)
+
+        self.platform_image = pygame.image.load("mats/plat31c.png").convert_alpha()
+
+        # Load custom Level 4 platforms (excluding skull plat 2)
+        self.platform_images = []
+        try:
+            for i in [4, 5, 6]:
+                plat_raw = pygame.image.load(f"mats/platforms/lvl_4_plat{i}.png").convert_alpha()
+                self.platform_images.append(trim_transparent_borders(plat_raw))
+        except pygame.error as e:
+            print(f"Error loading Level 4 platforms: {e}")
+            if not self.platform_images:
+                self.platform_images = [self.platform_image]
+
+        # Reusing Level 1 enemies for now (until you provide new Level 4 enemies)
+        self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
+        self.demon_walk_r, self.demon_walk_l = load_enemy_frames("spritsheets/enemies/D_WALK_SSNB.png", 7, 0.35)
+        self.demon_attack_r, self.demon_attack_l = load_enemy_frames("spritsheets/enemies/D_attack_SSNB.png", 12, 0.35)
+        self.skel_walk_r, self.skel_walk_l = load_enemy_frames("spritsheets/enemies/skelly_walk_NB.png", 8, 0.7)
+        self.skel_idle_r, self.skel_idle_l = load_enemy_frames("spritsheets/enemies/skelly_idle_NB.png", 10, 0.7)
+        self.skel_attack_r, self.skel_attack_l = load_enemy_frames("spritsheets/enemies/skelly_attack_NB.png", 10, 0.7)
