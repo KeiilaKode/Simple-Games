@@ -38,8 +38,6 @@ try:
     pygame.mixer.music.set_volume(0.2)
     pygame.mixer.music.play(-1, 0.0)  # Start playing immediately on the main menu
 
-
-
     jump_fx = pygame.mixer.Sound("mats/Swoosh.mp3")
     jump_fx.set_volume(0.3)
     death_fx = pygame.mixer.Sound("mats/Pause.mp3")
@@ -420,7 +418,15 @@ while run:
                             current_level.demented_group
                         ])
                     elif current_state == "LEVEL_4":
-                        enemy_targets.extend([current_level.demon_group, current_level.skeleton_group])
+                        # UPDATED TO TARGET ALL 6 NEW ENEMIES
+                        enemy_targets.extend([
+                            current_level.elaine_group,
+                            current_level.groundskeeper_group,
+                            current_level.royalhh_group,
+                            current_level.royalzombie_group,
+                            current_level.zombie1_group,
+                            current_level.zombie2_group
+                        ])
 
                     for group in enemy_targets:
                         for target in group:
@@ -551,7 +557,15 @@ while run:
                         current_level.demented_group
                     ])
                 elif current_state == "LEVEL_4":
-                    enemy_groups_to_check.extend([current_level.demon_group, current_level.skeleton_group])
+                    # UPDATED TO CHECK COLLISION WITH ALL 6 NEW ENEMIES
+                    enemy_groups_to_check.extend([
+                        current_level.elaine_group,
+                        current_level.groundskeeper_group,
+                        current_level.royalhh_group,
+                        current_level.royalzombie_group,
+                        current_level.zombie1_group,
+                        current_level.zombie2_group
+                    ])
 
                 for group in enemy_groups_to_check:
                     for target in group:

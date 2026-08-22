@@ -1,7 +1,7 @@
 # --- level.py ---#
 import pygame
 import random
-from entities import Enemy, Demon, Skeleton, Platform, Helldog, Mau, Pkgrim, Azule, Titus, Lionel, Demented
+from entities import Enemy, Demon, Skeleton, Platform, Helldog, Mau, Pkgrim, Azule, Titus, Lionel, Demented, Elaine, Groundskeeper, RoyalHH, RoyalZombie, Zombie1, Zombie2
 
 
 def trim_black_side_borders(surface, threshold=15):
@@ -577,13 +577,19 @@ class Level_03(Level_01):
                 screen.blit(enemy.image, (x, enemy.rect.top))
 
 
-# --- NEW LEVEL 4 CLASS ---
 class Level_04(Level_01):
     def __init__(self, screen_width, screen_height):
-        # Increased to drop the collision line past the angel statue to the flat stone!
         self.platform_offset_ratio = 0.40
         self.floor_y_offset = 0
         super().__init__(screen_width, screen_height)
+
+        # Initialize the 6 new Level 4 specific groups
+        self.elaine_group = pygame.sprite.Group()
+        self.groundskeeper_group = pygame.sprite.Group()
+        self.royalhh_group = pygame.sprite.Group()
+        self.royalzombie_group = pygame.sprite.Group()
+        self.zombie1_group = pygame.sprite.Group()
+        self.zombie2_group = pygame.sprite.Group()
 
     def load_assets(self):
         # 1. Start background
@@ -619,7 +625,7 @@ class Level_04(Level_01):
                                                      (self.bg_w, self.screen_height)) for f in full_bg_filenames]
         self.max_backgrounds = len(full_bg_filenames)
 
-        # Load Custom Level 4 Floor (Now trimming the transparent pixels to fix the gaps!)
+        # Load Custom Level 4 Floor
         raw_floor = pygame.image.load("mats/platforms/lvl4_floor.png").convert_alpha()
         trimmed_floor = trim_transparent_borders(raw_floor)
 
@@ -642,10 +648,94 @@ class Level_04(Level_01):
             if not self.platform_images:
                 self.platform_images = [self.platform_image]
 
-        # Reusing Level 1 enemies for now (until you provide new Level 4 enemies)
+        # Load universal flyers
         self.bird_sheet_img = pygame.image.load("spritsheets/enemies/flyer_SS_NB.png").convert_alpha()
-        self.demon_walk_r, self.demon_walk_l = load_enemy_frames("spritsheets/enemies/D_WALK_SSNB.png", 7, 0.35)
-        self.demon_attack_r, self.demon_attack_l = load_enemy_frames("spritsheets/enemies/D_attack_SSNB.png", 12, 0.35)
-        self.skel_walk_r, self.skel_walk_l = load_enemy_frames("spritsheets/enemies/skelly_walk_NB.png", 8, 0.7)
-        self.skel_idle_r, self.skel_idle_l = load_enemy_frames("spritsheets/enemies/skelly_idle_NB.png", 10, 0.7)
-        self.skel_attack_r, self.skel_attack_l = load_enemy_frames("spritsheets/enemies/skelly_attack_NB.png", 10, 0.7)
+
+        # Load new Level 4 Enemies!
+        scale = 0.55
+        self.elaine_walk_r, self.elaine_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/elaine_walk_ss.png", 8, scale)
+        self.elaine_atk_r, self.elaine_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/elaine_attack_ss.png", 10, scale)
+
+        self.gk_walk_r, self.gk_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/groundskeeper_walk_ss.png", 8, scale)
+        self.gk_idle_r, self.gk_idle_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/groundskeeper_idle_ss.png", 6, scale)
+        self.gk_atk_r, self.gk_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/groundskeeper_attack_ss.png", 8, scale)
+
+        self.rhh_walk_r, self.rhh_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalhh_walk_ss.png", 12, scale)
+        self.rhh_atk_r, self.rhh_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalhh_attack_ss.png", 10, scale)
+
+        self.rz_walk_r, self.rz_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalzombie_walk_ss.png", 8, scale)
+        self.rz_atk_r, self.rz_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/royalzombie_attack_ss.png", 11, scale)
+
+        self.z1_walk_r, self.z1_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie1_walk_ss.png", 8, scale)
+        self.z1_atk_r, self.z1_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie1_attack_ss.png", 12, scale)
+
+        self.z2_walk_r, self.z2_walk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie2_walk_ss.png", 8, scale)
+        self.z2_atk_r, self.z2_atk_l = load_enemy_frames("spritsheets/enemies/lvl_4_enemies/zombie2_attack_ss.png", 13, scale)
+
+    def reset(self):
+        super().reset()
+        self.elaine_group.empty()
+        self.groundskeeper_group.empty()
+        self.royalhh_group.empty()
+        self.royalzombie_group.empty()
+        self.zombie1_group.empty()
+        self.zombie2_group.empty()
+
+    def update(self, dt, camera_x, player_x, player_y):
+        for platform in list(self.platform_group):
+            if platform.rect.right < camera_x - 4000:
+                platform.kill()
+
+        if camera_x + self.screen_width < self.level_end_x - 500:
+            if len(self.platform_group) < 40:
+                last_p = max(self.platform_group, key=lambda p: p.rect.x, default=None)
+                p_x = (last_p.rect.right + random.randint(120, 290)) if last_p else (camera_x + self.screen_width + 100)
+                chosen_plat_img = random.choice(self.platform_images)
+                self.platform_group.add(
+                    Platform(p_x, random.randint(320, 625), random.randint(90, 200), chosen_plat_img,
+                             self.platform_offset_ratio))
+
+            if len(self.enemy_group) < 3 and random.randint(1, 60) == 1:
+                side = random.choice(["left", "right"])
+                ex = (camera_x - 150) if side == "left" else (camera_x + self.screen_width + 150)
+                self.enemy_group.add(Enemy(ex, random.randint(200, 550), self.bird_sheet_img, .15,
+                                           forced_direction=1 if side == "left" else -1))
+
+        current_bg_index = int(player_x // self.bg_w)
+
+        # Alternate Spawning between the 6 new Level 4 enemies
+        if current_bg_index > self.last_spawned_bg_index and current_bg_index < self.max_backgrounds - 1:
+            t_bg = current_bg_index + 1
+            p_start, p_end = t_bg * self.bg_w, (t_bg + 1) * self.bg_w - 100
+
+            spawn_type = t_bg % 6
+
+            if spawn_type == 0:
+                self.elaine_group.add(Elaine(p_start + 100, self.y_ground, p_start, p_end, self.elaine_walk_r, self.elaine_walk_l, self.elaine_atk_r, self.elaine_atk_l))
+            elif spawn_type == 1:
+                self.groundskeeper_group.add(Groundskeeper(p_start + 100, self.y_ground, p_start, p_end, self.gk_walk_r, self.gk_walk_l, self.gk_idle_r, self.gk_idle_l, self.gk_atk_r, self.gk_atk_l))
+            elif spawn_type == 2:
+                self.royalhh_group.add(RoyalHH(p_start + 100, self.y_ground, p_start, p_end, self.rhh_walk_r, self.rhh_walk_l, self.rhh_atk_r, self.rhh_atk_l))
+            elif spawn_type == 3:
+                self.royalzombie_group.add(RoyalZombie(p_start + 100, self.y_ground, p_start, p_end, self.rz_walk_r, self.rz_walk_l, self.rz_atk_r, self.rz_atk_l))
+            elif spawn_type == 4:
+                self.zombie1_group.add(Zombie1(p_start + 100, self.y_ground, p_start, p_end, self.z1_walk_r, self.z1_walk_l, self.z1_atk_r, self.z1_atk_l))
+            else:
+                self.zombie2_group.add(Zombie2(p_start + 100, self.y_ground, p_start, p_end, self.z2_walk_r, self.z2_walk_l, self.z2_atk_r, self.z2_atk_l))
+
+            self.last_spawned_bg_index = current_bg_index
+
+        self.enemy_group.update(camera_x, self.screen_width)
+        self.elaine_group.update(camera_x, player_x, player_y)
+        self.groundskeeper_group.update(camera_x, player_x, player_y)
+        self.royalhh_group.update(camera_x, player_x, player_y)
+        self.royalzombie_group.update(camera_x, player_x, player_y)
+        self.zombie1_group.update(camera_x, player_x, player_y)
+        self.zombie2_group.update(camera_x, player_x, player_y)
+
+    def draw(self, screen, camera_x):
+        super().draw(screen, camera_x)
+        for group in [self.elaine_group, self.groundskeeper_group, self.royalhh_group, self.royalzombie_group, self.zombie1_group, self.zombie2_group]:
+            for enemy in group:
+                if -200 < (x := enemy.rect.x - camera_x) < self.screen_width + 200:
+                    screen.blit(enemy.image, (x, enemy.rect.top))

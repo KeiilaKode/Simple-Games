@@ -280,9 +280,6 @@ class Merchant(pygame.sprite.Sprite):
         screen.blit(self.image, self.rect.topleft)
 
 
-import pygame
-
-
 class Merchant_UI:
     def __init__(self, screen_width, screen_height, sold_out_ref):
         try:
@@ -905,6 +902,363 @@ class Demented(pygame.sprite.Sprite):
         self.rect.bottom = old_bottom
 
         # --- PERFORMANCE FIX ---
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
+        if self.rect.right < camera_x - 1000: self.kill()
+
+
+# ==========================================
+# NEW LEVEL 4 ENEMIES
+# ==========================================
+
+class Elaine(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
+        super().__init__()
+        self.health = 5
+        self.rem_value = 18
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 90
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 2.5, 1, "walk"
+        self.image = self.walk_frames_right[0]
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 320 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x:
+                self.rect.x, self.direction = self.patrol_end_x, -1
+            elif self.rect.x <= self.patrol_start_x:
+                self.rect.x, self.direction = self.patrol_start_x, 1
+            if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                self.frame_index]
+
+        elif self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 70:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index += 1
+                if self.frame_index >= len(self.attack_frames_right):
+                    self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
+        if self.rect.right < camera_x - 1000:
+            self.kill()
+
+
+class Groundskeeper(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, idle_r, idle_l, attack_r, attack_l):
+        super().__init__()
+        self.health = 4
+        self.rem_value = 15
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.idle_frames_right, self.idle_frames_left = idle_r, idle_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 100
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 1.8, 1, "walk"
+        self.image = self.walk_frames_right[0]
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x or self.rect.x <= self.patrol_start_x:
+                self.rect.x = self.patrol_end_x if self.direction == 1 else self.patrol_start_x
+                self.direction *= -1
+                self.state, self.frame_index = "idle", 0
+            if self.state == "walk":
+                if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                    self.update_time, self.frame_index = pygame.time.get_ticks(), (self.frame_index + 1) % len(
+                        self.walk_frames_right)
+                self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                    self.frame_index]
+
+        if self.state == "idle":
+            if pygame.time.get_ticks() - self.update_time > 120:
+                self.update_time, self.frame_index = pygame.time.get_ticks(), self.frame_index + 1
+                if self.frame_index >= len(self.idle_frames_right): self.state, self.frame_index = "walk", 0
+            if self.state == "idle":
+                self.image = self.idle_frames_right[self.frame_index] if self.direction == 1 else self.idle_frames_left[
+                    self.frame_index]
+
+        if self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 80:
+                self.update_time, self.frame_index = pygame.time.get_ticks(), self.frame_index + 1
+                if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
+        if self.rect.right < camera_x - 1000: self.kill()
+
+
+class RoyalHH(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
+        super().__init__()
+        self.health = 4
+        self.rem_value = 15
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 80
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 3.8, 1, "walk"
+        self.image = self.walk_frames_right[0]
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 320 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x:
+                self.rect.x, self.direction = self.patrol_end_x, -1
+            elif self.rect.x <= self.patrol_start_x:
+                self.rect.x, self.direction = self.patrol_start_x, 1
+            if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                self.frame_index]
+
+        elif self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 60:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index += 1
+                if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                    self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
+        if self.rect.right < camera_x - 1000: self.kill()
+
+
+class RoyalZombie(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
+        super().__init__()
+        self.health = 5
+        self.rem_value = 18
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 100
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 2.0, 1, "walk"
+        self.image = self.walk_frames_right[0]
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x:
+                self.rect.x, self.direction = self.patrol_end_x, -1
+            elif self.rect.x <= self.patrol_start_x:
+                self.rect.x, self.direction = self.patrol_start_x, 1
+            if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                self.frame_index]
+
+        elif self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 80:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index += 1
+                if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                    self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
+        if self.rect.right < camera_x - 1000: self.kill()
+
+
+class Zombie1(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
+        super().__init__()
+        self.health = 3
+        self.rem_value = 10
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 100
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 1.9, 1, "walk"
+        self.image = self.walk_frames_right[0]
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x:
+                self.rect.x, self.direction = self.patrol_end_x, -1
+            elif self.rect.x <= self.patrol_start_x:
+                self.rect.x, self.direction = self.patrol_start_x, 1
+            if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                self.frame_index]
+
+        elif self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 80:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index += 1
+                if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                    self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+
+        if getattr(self, "last_image", None) != self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+            self.last_image = self.image
+
+        if self.rect.right < camera_x - 1000: self.kill()
+
+
+class Zombie2(pygame.sprite.Sprite):
+    def __init__(self, spawn_x, y_pos, patrol_start_x, patrol_end_x, walk_r, walk_l, attack_r, attack_l):
+        super().__init__()
+        self.health = 3
+        self.rem_value = 12
+        self.walk_frames_right, self.walk_frames_left = walk_r, walk_l
+        self.attack_frames_right, self.attack_frames_left = attack_r, attack_l
+        self.frame_index, self.update_time, self.anim_speed = 0, pygame.time.get_ticks(), 100
+        self.patrol_start_x, self.patrol_end_x, self.speed, self.direction, self.state = patrol_start_x, patrol_end_x, 2.1, 1, "walk"
+        self.image = self.walk_frames_right[0]
+        self.rect = self.image.get_rect(x=spawn_x)
+        self.y_offset = 160
+        self.rect.bottom = y_pos + self.y_offset
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def take_damage(self):
+        self.health -= 1
+        return self.health <= 0
+
+    def update(self, camera_x, player_x=None, player_y=None):
+        if player_x and player_y and abs(player_y - self.rect.centery) < 350:
+            if abs(player_x - self.rect.centerx) < 300 and self.state != "attack":
+                self.state, self.frame_index, self.update_time = "attack", 0, pygame.time.get_ticks()
+                self.direction = 1 if player_x > self.rect.centerx else -1
+
+        if self.state == "walk":
+            self.rect.x += self.direction * self.speed
+            if self.rect.x >= self.patrol_end_x:
+                self.rect.x, self.direction = self.patrol_end_x, -1
+            elif self.rect.x <= self.patrol_start_x:
+                self.rect.x, self.direction = self.patrol_start_x, 1
+            if pygame.time.get_ticks() - self.update_time > self.anim_speed:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index = (self.frame_index + 1) % len(self.walk_frames_right)
+            self.image = self.walk_frames_right[self.frame_index] if self.direction == 1 else self.walk_frames_left[
+                self.frame_index]
+
+        elif self.state == "attack":
+            if pygame.time.get_ticks() - self.update_time > 80:
+                self.update_time = pygame.time.get_ticks()
+                self.frame_index += 1
+                if self.frame_index >= len(self.attack_frames_right): self.state, self.frame_index = "walk", 0
+            if self.state == "attack":
+                self.image = self.attack_frames_right[self.frame_index] if self.direction == 1 else \
+                    self.attack_frames_left[self.frame_index]
+
+        old_bottom = self.rect.bottom
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.bottom = old_bottom
+
         if getattr(self, "last_image", None) != self.image:
             self.mask = pygame.mask.from_surface(self.image)
             self.last_image = self.image
